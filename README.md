@@ -1,5 +1,7 @@
 # Satellite Propogation Toolkit
 
+> **_WARNING:_** This project is still under construction
+
 Satellite propogation toolkit is a project written in Python to propogate orbitting satellites and other debris based on radar tracking data from CelesTrak.
 
 Satellite Propogatioin Toolkit currently has the following features:
@@ -25,3 +27,4 @@ Satellite Propogatioin Toolkit currently has the following features:
 8. Tests
 9. Example
 10. Sample generated images
+11. Documentation
