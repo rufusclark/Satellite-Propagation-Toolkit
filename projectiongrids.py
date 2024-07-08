@@ -280,7 +280,21 @@ class TopocentricProjectionGrid(BaseProjectionGrid):
         Returns:
             FoV measured in degrees
         """
-        return 2 * math.sqrt(0.25 * math.pi * ((self.width * self.x_width/2) ** 2 + (self.height*self.y_width/2) ** 2))
+        return 0.5 * math.sqrt(math.pi * ((self.width * self.x_width)**2 + (self.height * self.y_width)**2))
 
+    @ staticmethod
+    def width_and_height_from_FoV(m: Matrix, FoV: float) -> tuple[float, float]:
+        """calculate the width and height per cell for a given matrix, m, with the desired (area equivalent) FoV
+
+        Args:
+            m: matrix
+            FoV: desired FoV degrees
+
+        Returns:
+            cell_width, cell_height measured in degrees per cell
+        """
+        cell_width = cell_height = math.sqrt(
+            (4 * FoV**2)/(math.pi * (m.width**2 + m.height**2)))
+        return cell_width, cell_height
 
 # TODO: Implement topocentric model with hemisphere projection
