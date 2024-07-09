@@ -11,7 +11,7 @@ from .models import Sats, Sat, ts
 from .ledmatrix import Matrix
 
 
-class BaseProjectionGrid:
+class BaseProjectionModel:
     name: str
 
     def __init__(self, matrix: Matrix, origin: GeographicPosition, x_width: float = 0.5, y_width: float = 0.5) -> None:
@@ -41,7 +41,7 @@ class BaseProjectionGrid:
         raise NotImplementedError()
 
 
-class GeocentricProjectionGrid(BaseProjectionGrid):
+class GeocentricProjectionModel(BaseProjectionModel):
     """Geocentric Grid over an origin on the surface of the Earth where each row and col represents a specified change in latitude and longitude"""
     name = "geo"
 
@@ -216,7 +216,7 @@ class GeocentricProjectionGrid(BaseProjectionGrid):
         return 2 * (self.equivalent_altitude_angle(altitude))
 
 
-class TopocentricProjectionGrid(BaseProjectionGrid):
+class TopocentricProjectionModel(BaseProjectionModel):
     """Topocentric Grid about an origin on the surface of the Earth where each row and col represents a specified change in degrees North and East"""
     name = "topo"
 

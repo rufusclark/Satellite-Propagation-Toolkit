@@ -2,7 +2,7 @@
 from skyfield.timelib import Time
 from typing import Literal
 from .ledmatrix import Matrix, MatrixFrame
-from .projectiongrids import BaseProjectionGrid
+from .projectionmodels import BaseProjectionModel
 from .models import ts, Sats
 from .datasources import NORAD, SATCAT
 from .picointerface import PC
@@ -33,7 +33,7 @@ def load_and_update_all_sats() -> Sats:
     return sats
 
 
-def dirname(model: BaseProjectionGrid) -> str:
+def dirname(model: BaseProjectionModel) -> str:
     """function for consistent directory naming
 
     Args:
@@ -46,7 +46,7 @@ def dirname(model: BaseProjectionGrid) -> str:
     return f"./images/{model.name}{model.width}x{model.height}({model.x_width}x{model.y_width}deg per cell)/"
 
 
-def generate_image(sats: Sats, matrix: Matrix, model: BaseProjectionGrid, t: Time = ts.now(), filename: str = "live capture.png"):
+def generate_image(sats: Sats, matrix: Matrix, model: BaseProjectionModel, t: Time = ts.now(), filename: str = "live capture.png"):
     # create frame for image
     frame = MatrixFrame(matrix, t)
     # propogate sats and populate frame
@@ -55,7 +55,7 @@ def generate_image(sats: Sats, matrix: Matrix, model: BaseProjectionGrid, t: Tim
     frame.to_png(filename)
 
 
-def generate_images(sats: Sats, matrix: Matrix, model: BaseProjectionGrid, t_start: Time = ts.now(), interval: float = 1, n: int = 0):
+def generate_images(sats: Sats, matrix: Matrix, model: BaseProjectionModel, t_start: Time = ts.now(), interval: float = 1, n: int = 0):
     """generate a series of images starting at the start time and with an interval of interval seconds. If n is set this will limit the number of images created otherwise it will run indefinately
 
     Args:
@@ -124,7 +124,7 @@ def REWRITE_frame_to_pico(f: MatrixFrame, pc: PC):
     pc.update_matrix()
 
 
-def update_pico_live(sats: Sats, matrix: Matrix, model: BaseProjectionGrid, pc: PC):
+def update_pico_live(sats: Sats, matrix: Matrix, model: BaseProjectionModel, pc: PC):
     """update pico with live data computed on pc
 
     Args:

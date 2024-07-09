@@ -16,6 +16,8 @@ class PC:
 
         self.conn = serial.Serial(port, baudrate)
 
+        print(f"Connected to Pico on port {port}")
+
     def auto_port(self) -> str:
         """returns the str port device of first connected serial device
 
