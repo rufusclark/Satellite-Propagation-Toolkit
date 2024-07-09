@@ -1,6 +1,6 @@
 """contains code for analysing propogation data"""
-from rgb import RGB
-from models import Sat
+from .rgb import RGB
+from .models import Sat
 
 
 class BasePixelModifier:
@@ -20,12 +20,23 @@ class BasePixelModifier:
         raise NotImplementedError
 
 
+class AlwaysPixelModifier(BasePixelModifier):
+    """always changes rgb value of pixel for sat"""
+
+    def __init__(self, modifier: RGB) -> None:
+        """create a new pixel modifier that will always change the colour of the pixel by adding the modifier to the current pixel if any of the tags match the sat"""
+        self.modifier = modifier
+
+    def handle(self, sat: Sat, rgb: RGB) -> RGB:
+        return rgb + self.modifier
+
+
 class TagPixelModifier(BasePixelModifier):
     """change rgb value of pixel based on sat tags
     """
 
     def __init__(self, tags: list[str] | str, modifer: RGB) -> None:
-        """create a new pixel modifier that will change the colour of the pxiel by adding the modifier to the current pixel if any of the tags match the sat
+        """create a new pixel modifier that will change the colour of the pixel by adding the modifier to the current pixel if any of the tags match the sat
 
         Args:
             tags: string or list of string tags

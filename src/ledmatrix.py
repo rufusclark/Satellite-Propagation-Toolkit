@@ -2,9 +2,9 @@
 from typing import Sequence
 from skyfield.timelib import Time
 
-from models import Sat
-from rgb import RGB
-from analysis import BasePixelModifier
+from .models import Sat
+from .rgb import RGB
+from .analysis import BasePixelModifier
 
 
 class Matrix:

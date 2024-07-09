@@ -1,5 +1,5 @@
 """Pico main code"""
-from picointerface import Pico
+from src.picointerface import Pico
 
 if __name__ == "__main__":
     pico = Pico()

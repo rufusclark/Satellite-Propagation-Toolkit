@@ -7,8 +7,8 @@ from skyfield.api import wgs84
 from skyfield.toposlib import GeographicPosition
 from skyfield.timelib import Time
 
-from models import Sats, Sat, ts
-from ledmatrix import Matrix
+from .models import Sats, Sat, ts
+from .ledmatrix import Matrix
 
 
 class BaseProjectionGrid:
@@ -49,7 +49,7 @@ class GeocentricProjectionGrid(BaseProjectionGrid):
         super().__init__(matrix, origin, lon_width, lat_width)
 
     def info(self) -> str:
-        from models import Orbits
+        from .models import Orbits
         orbits = Orbits()
         orbit_data = [
             f"At {orbit.name} ({orbit.alt}km), effective FoV is {self.effective_FoV(orbit.alt)} degrees and minimum FoV is {self.minimum_FoV(orbit.alt)} degrees" for orbit in orbits.orbits]

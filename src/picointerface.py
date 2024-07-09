@@ -1,7 +1,9 @@
 """handles communication with RPi Pico over serial and control of the Pico device"""
 from typing import List, Tuple
 
-from ledmatrix import RGB
+from .ledmatrix import RGB
+
+# TODO: Implement sending blobs or files
 
 
 class PC:
@@ -63,6 +65,17 @@ class PC:
         """update the led matrix with the current led matrix buffer
         """
         self.send_csv(["update matrix"])
+
+    def randomise(self):
+        """update the led matrix with random colours indefinately
+        """
+        from random import randint
+        from time import sleep
+
+        while True:
+            self.set_pixel_buffer(randint(0, 15), randint(0, 15), RGB.random())
+            self.update_matrix()
+            sleep(0.01)
 
 
 class Pico:
@@ -131,16 +144,3 @@ class Pico:
             self.clear_matrix()
         elif op == "update matrix":
             self.update_matrix()
-
-
-# TODO: Implement sending blobs or files
-# TODO: Implement Pico code aswell
-if __name__ == "__main__":
-    from random import randint
-
-    pc = PC()
-    print(pc.auto_port())
-
-    while True:
-        pc.set_pixel_buffer(randint(0, 15), randint(0, 15), RGB.random())
-        pc.update_matrix()

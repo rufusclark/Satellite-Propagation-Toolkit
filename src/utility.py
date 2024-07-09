@@ -1,11 +1,11 @@
 """contains useful utilities"""
 from skyfield.timelib import Time
 from typing import Literal
-from ledmatrix import Matrix, MatrixFrame
-from projectiongrids import BaseProjectionGrid
-from models import ts, Sats
-from datasources import NORAD, SATCAT
-from picointerface import PC
+from .ledmatrix import Matrix, MatrixFrame
+from .projectiongrids import BaseProjectionGrid
+from .models import ts, Sats
+from .datasources import NORAD, SATCAT
+from .picointerface import PC
 
 
 def load_and_update_all_sats() -> Sats:

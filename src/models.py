@@ -6,9 +6,6 @@ from skyfield.api import EarthSatellite, load, wgs84
 from skyfield.toposlib import GeographicPosition
 from skyfield.timelib import Time
 
-import math
-
-# from datasources import SATCAT
 
 # Time scale for Earth Orbiting Satellites
 ts = load.timescale()
@@ -146,7 +143,7 @@ class Sat:
         Args:
             satcat: satcat data
         """
-        from datasources import SATCAT
+        from .datasources import SATCAT
 
         # ignore if not SATCAT data exists for sat
         if self.name not in satcat:

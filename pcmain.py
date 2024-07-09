@@ -2,14 +2,18 @@ import time
 
 from skyfield.api import wgs84
 
-from datasources import NORAD, SATCAT
-from ledmatrix import Matrix, MatrixFrame
-from models import ts, Orbits
-from projectiongrids import TopocentricProjectionGrid, GeocentricProjectionGrid
-from picointerface import PC
-from analysis import TagPixelModifier, NotTagPixelMofidier
-from rgb import RGB
-from utility import load_and_update_all_sats, generate_image, generate_images, update_pico_live
+from src.datasources import NORAD, SATCAT
+from src.ledmatrix import Matrix, MatrixFrame
+from src.models import ts, Orbits
+from src.projectiongrids import TopocentricProjectionGrid, GeocentricProjectionGrid
+from src.picointerface import PC
+from src.analysis import TagPixelModifier, NotTagPixelMofidier, AlwaysPixelModifier
+from src.rgb import RGB
+from src.utility import load_and_update_all_sats, generate_image, generate_images, update_pico_live
+
+cat0 = [
+    AlwaysPixelModifier(RGB(255, 255, 255))
+]
 
 cat1 = [
     TagPixelModifier("communications", RGB(100, 0, 0)),
@@ -35,7 +39,7 @@ if __name__ == "__main__":
     # sats.print_all_tags()
 
     # define matrix size
-    matrix = Matrix(16, 16, pixel_modifiers=cat1)
+    matrix = Matrix(32, 32, pixel_modifiers=cat1)
 
     # define grid model
     cell_width, cell_height = TopocentricProjectionGrid.width_and_height_from_FoV(

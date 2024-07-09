@@ -6,7 +6,7 @@ from csv import DictReader
 
 from skyfield.api import load
 
-from models import Sat, Sats
+from .models import Sat, Sats
 
 
 class NORADSource:
