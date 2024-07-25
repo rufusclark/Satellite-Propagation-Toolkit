@@ -8,4 +8,4 @@ from .rgb import RGB
 from .analysis import AlwaysPixelModifier, LaunchDateModifier, TagPixelModifier, NotTagPixelMofidier
 from .picointerface import PC, Pico
 from .projectionmodels import TopocentricProjectionModel, GeocentricProjectionModel
-from .utility import generate_image, generate_images, update_pico_live, dirname, load_and_update_all_sats, REWRITE_frame_to_pico
+from .utility import generate_image, generate_images, update_pico_live, dirname, load_and_update_all_sats, REWRITE_frame_to_pico, get_estimated_latlon

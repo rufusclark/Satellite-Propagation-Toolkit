@@ -1,5 +1,8 @@
 """contains useful utilities"""
+import geocoder
 from skyfield.timelib import Time
+from skyfield.toposlib import GeographicPosition
+from skyfield.api import wgs84
 from typing import Literal
 from .ledmatrix import Matrix, MatrixFrame
 from .projectionmodels import BaseProjectionModel
@@ -162,3 +165,13 @@ def update_pico_live(sats: Sats, matrix: Matrix, model: BaseProjectionModel, pc:
 
     except KeyboardInterrupt:
         print("Stopping live update to pico")
+
+
+def get_estimated_latlon() -> GeographicPosition:
+    """return a skyfield GeographicPosition of your estimated location using ip information
+
+    Returns:
+        GeographicPosition
+    """
+    import geocoder
+    return wgs84.latlon(*geocoder.ip('me').latlng)
