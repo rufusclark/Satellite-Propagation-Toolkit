@@ -1,5 +1,5 @@
 """contains grids for projecting satellite locations onto square grids"""
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Any
 
 import math
 
@@ -8,7 +8,9 @@ from skyfield.toposlib import GeographicPosition
 from skyfield.timelib import Time
 
 from .models import Sats, Sat, ts
-from .ledmatrix import Matrix
+from .matrix import Matrix
+
+EARTH_RADIUS = 6371  # [km] mean radius
 
 
 class BaseProjectionModel:
@@ -23,7 +25,7 @@ class BaseProjectionModel:
     def info(self) -> str:
         raise NotImplementedError()
 
-    def compute_sat_position(self, sats: Sats, fn: Callable[[int, int, Sat], None], t: Time = ts.now()) -> None:
+    def compute_sat_position(self, sats: Sats, fn: Callable[[int, int, Sat, dict[str, Any]], None], t: Time = ts.now()) -> None:
         raise NotImplementedError()
 
     @property
@@ -57,7 +59,7 @@ class GeocentricProjectionModel(BaseProjectionModel):
 
         return f"Geocentric Projection about {self.origin.latitude.degrees:.3f} degrees North and {self.origin.longitude.degrees:.3f} degrees East where each cell has a width of {self.x_width} degrees and height of {self.y_width} degrees \n{new_line.join(orbit_data)}"
 
-    def compute_sat_position(self, sats: Sats, fn: Callable[[int, int, Sat], None], t: Time = ts.now()) -> None:
+    def compute_sat_position(self, sats: Sats, fn: Callable[[int, int, Sat, dict[str, Any]], None], t: Time = ts.now()) -> None:
         """checks whether each sat in sats falls within the grid box when propogated to a given time defined about the center of the Earth above the origin location. This checks whether each satellite is within a given latitude and longitude range around the observer.
 
         If the sat falls within this grid the supplied function fn is called with the (x, y) coordinates and sat provided as args, where the top left cell is given the position (0, 0).
@@ -75,7 +77,7 @@ class GeocentricProjectionModel(BaseProjectionModel):
 
         for sat in sats.sats:
             # propogate
-            lat, lon, _ = sat.projected_lat_lon_alt(t)
+            lat, lon, alt = sat.projected_lat_lon_alt(t)
 
             # ignore when propogation is invalid
             if math.isnan(lat) or math.isnan(lon):
@@ -92,8 +94,10 @@ class GeocentricProjectionModel(BaseProjectionModel):
             if y < 0 or y >= self.height:
                 continue
 
+            args = {"altitude": alt, "distance": alt}
+
             # call provided function if in grid
-            fn(x, y, sat)
+            fn(x, y, sat, args)
 
     def _cell_bounds(self, x: int, y: int) -> Tuple[float, float, float, float]:
         """returns the bounds of a grid cell with position (x, y). Please note positions are zero indexed
@@ -223,7 +227,7 @@ class TopocentricProjectionModel(BaseProjectionModel):
     def info(self) -> str:
         return f"Topocentric Projection about {self.origin.latitude.degrees:.3f} degrees North and {self.origin.longitude.degrees:.3f} degrees East where each cell has a width of {self.x_width} degrees and height of {self.y_width} degrees with an effective Field of View of {self.effective_FoV():.0f} degrees and minimum Field of View of {self.minimum_FoV():.0f} degrees"
 
-    def compute_sat_position(self, sats: Sats, fn: Callable[[int, int, Sat], None], t: Time = ts.now()) -> None:
+    def compute_sat_position(self, sats: Sats, fn: Callable[[int, int, Sat, dict[str, Any]], None], t: Time = ts.now()) -> None:
         """checks whether each sat in sats falls with the grid box when progtated to a given time defined about the origin (topocentric), where the angels are perpendicular to themselves in the North and East directions. This gives an effective field of view from the origin/observer, given by north and south angles normal to the origin/observers point on the Earth.
 
         If the sat falls within this grid the supplied function fn is called with the (x, y) coordinates and sat provided as args, where the top left cell is given the position (0, 0).
@@ -261,8 +265,15 @@ class TopocentricProjectionModel(BaseProjectionModel):
             if y < 0 or y >= self.height:
                 continue
 
+            # calculate altitude (distance) [km]
+            alt_distance = math.sqrt(distance**2 + EARTH_RADIUS**2 - 2 * distance *
+                                     EARTH_RADIUS * math.cos(math.radians(alt + 90))) - EARTH_RADIUS
+
+            # additional args
+            args = {"altitude": alt_distance, "distance": distance}
+
             # call provided function if in grid
-            fn(x, y, sat)
+            fn(x, y, sat, args)
 
     def minimum_FoV(self) -> float:
         """minimimum FoV from the observers locations

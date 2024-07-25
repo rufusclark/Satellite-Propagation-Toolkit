@@ -1,10 +1,10 @@
 """code and utilities to work with LED matrix data, generate images and more"""
-from typing import Sequence
+from typing import Sequence, Any
 from skyfield.timelib import Time
 
 from .models import Sat
 from .rgb import RGB
-from .analysis import BasePixelModifier
+from .analysis import BasePixelModifier, AltitudeModifier
 
 
 class Matrix:
@@ -79,7 +79,7 @@ class MatrixFrame:
     def get_pixel(self, x: int, y: int) -> RGB:
         return self._pixels[self._pixel_idx(x, y)]
 
-    def handle_pixel_modifiers(self, x: int, y: int, sat: Sat):
+    def handle_pixel_modifiers(self, x: int, y: int, sat: Sat, args: dict[str, Any]):
         """conditionally change the value of a pixel based on conditional modifier logic from Matrix
 
         Args:
@@ -89,7 +89,7 @@ class MatrixFrame:
         """
         for modifier in self._m._pixel_modifiers:
             rgb = self.get_pixel(x, y)
-            rgb = modifier.handle(sat, rgb)
+            rgb = modifier.handle(sat, rgb, args)
             self.set_pixel(x, y, rgb)
 
     def _for_grid(self, fn) -> None:

@@ -2,6 +2,8 @@
 from typing import Callable, List, Dict, Tuple
 from typing_extensions import Self
 
+from datetime import datetime
+
 from skyfield.api import EarthSatellite, load, wgs84
 from skyfield.toposlib import GeographicPosition
 from skyfield.timelib import Time
@@ -15,6 +17,7 @@ class Sat:
     def __init__(self, fields, group: str = "", category: str = "") -> None:
         self.tags = [group.lower(), category.lower()]
         self._sat = EarthSatellite.from_omm(ts, fields)
+        self.launch_date = None
 
     def add_tag(self, tag: str) -> None:
         """add an additional tag to the sat if it doesn't already exist
@@ -162,7 +165,8 @@ class Sat:
             self.add_tag(SATCAT.OPERATIONAL_STATUS(data['OWNER']))
 
         if data['LAUNCH_DATE']:
-            self.launch_date = data['LAUNCH_DATE']
+            self.launch_date = datetime.strptime(
+                data['LAUNCH_DATE'], '%Y-%m-%d')
 
         if data['LAUNCH_SITE']:
             self.add_tag(SATCAT.LAUNCH_SITE(data['LAUNCH_SITE']))

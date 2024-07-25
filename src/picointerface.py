@@ -1,7 +1,7 @@
 """handles communication with RPi Pico over serial and control of the Pico device"""
 from typing import List, Tuple
 
-from .ledmatrix import RGB
+from .matrix import RGB
 
 # TODO: Implement sending blobs or files
 
