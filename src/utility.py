@@ -127,6 +127,27 @@ def REWRITE_frame_to_pico(f: MatrixFrame, pc: PC):
     pc.update_matrix()
 
 
+def REWRITE_frame_to_pico_2(f0: MatrixFrame, f1: MatrixFrame, pc: PC):
+    """hacky script to update matrix with data compared to last frame
+
+    Args:
+        f0: last matrix frame
+        f1: next matrix frame
+        pc: serial connection to pc
+    """
+
+    def update_px(x, y):
+        rgb0 = f0.get_pixel(x, y)
+        rgb1 = f1.get_pixel(x, y)
+
+        if rgb0 != rgb1:
+            # TODO: Implement update pixel and buffer
+            pc.set_pixel_buffer(x, y, rgb1)
+            pc.update_matrix()
+
+    f0._for_grid(update_px)
+
+
 def update_pico_live(sats: Sats, matrix: Matrix, model: BaseProjectionModel, pc: PC):
     """update pico with live data computed on pc
 
@@ -144,6 +165,9 @@ def update_pico_live(sats: Sats, matrix: Matrix, model: BaseProjectionModel, pc:
         t00 = monotonic()
         n = 0
 
+        # empty frame for comparison
+        last_frame = MatrixFrame(matrix, ts.now())
+
         while True:
             # timing code
             t0 = monotonic()
@@ -155,7 +179,10 @@ def update_pico_live(sats: Sats, matrix: Matrix, model: BaseProjectionModel, pc:
             # popogate model and fill frame
             model.compute_sat_position(sats, frame.handle_pixel_modifiers, t)
             # send to pico
-            REWRITE_frame_to_pico(frame, pc)
+            REWRITE_frame_to_pico_2(last_frame, frame, pc)
+
+            # save last frame
+            last_frame = frame
 
             # timing code
             t1 = monotonic()

@@ -23,6 +23,9 @@ class RGB:
     def __repr__(self) -> str:
         return f"<RGB {self.R, self.G, self.B}>"
 
+    def __eq__(self, other: Self) -> bool:
+        return self.R == other.R and self.G == other.G and self.B == other.B
+
     def __add__(self, other: Self) -> Self:
         self.R = max(0, min(255, self.R + other.R))
         self.G = max(0, min(255, self.G + other.G))
