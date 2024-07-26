@@ -1,8 +1,9 @@
 """backend for generating csv data for unity
 
-used to generate csv files for unity with ICRS position and veloicty relative to IRCS reference frame"""
+used to generate csv files for unity with ICRS position and velocity relative to IRCS reference frame, where the filename is the unix timestamp of the generation time"""
 from src import *
 import os
+import math
 
 if __name__ == "__main__":
     sats = load_and_update_all_sats()
@@ -25,6 +26,15 @@ if __name__ == "__main__":
 
         for sat in sats.sats:
             x, y, z, x_v, y_v, z_v = sat.cartesian_position_and_veloicty_at(t)
+
+            # remove invalid projection from data
+            valid = True
+            for item in [x, y, z, x_v, y_v, z_v]:
+                if math.isnan(item):
+                    valid = False
+                    break
+            if not valid:
+                continue
 
             launch_date = str(sat.launch_date.date()
                               ) if sat.launch_date else ""
