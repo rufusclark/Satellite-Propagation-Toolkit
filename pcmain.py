@@ -52,6 +52,7 @@ cat5 = [
 
 if __name__ == "__main__":
     obs_mecd = wgs84.latlon(53.46998696814808, -2.233615253169161)
+    obs = get_estimated_latlon()
 
     # load all sat data
     sats = load_and_update_all_sats()
@@ -59,7 +60,7 @@ if __name__ == "__main__":
     # sats.print_all_tags()
 
     # define matrix size
-    matrix = Matrix(16, 16, pixel_modifiers=cat5)
+    matrix = Matrix(16, 16, pixel_modifiers=cat0)
 
     # define grid model
     cell_width, cell_height = TopocentricProjectionModel.width_and_height_from_FoV(
@@ -71,8 +72,6 @@ if __name__ == "__main__":
 
     # init connection to pico
     pc = PC()
-
-    print(get_estimated_latlon())
 
     update_pico_live(sats, matrix, projection_model, pc)
 

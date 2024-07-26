@@ -78,8 +78,22 @@ class Sat:
         """
         return ts.now() - self._sat.epoch
 
-    def TEME_position_at(self, t=ts.now()):
+    def TEME_position_at(self, t: Time):
         return self._sat.at(t)
+
+    def cartesian_position_and_veloicty_at(self, t: Time):
+        """returns the veloicty and position of the satelite progated to the given time, relative to a ICRS reference frame where units are km or km/s respectively
+
+        Args:
+            t: time to propogate to. Defaults to ts.now().
+
+        Returns:
+            x, y, z [km], x_v, y_v, z_v [km/s]
+        """
+        pos = self.TEME_position_at(t)
+        x, y, z = pos.position.km  # type: ignore
+        x_v, y_v, z_v = pos.velocity.km_per_s  # type: ignore
+        return x, y, z, x_v, y_v, z_v
 
     def projected_lat_lon_alt(self, t: Time = ts.now()) -> Tuple[float, float, float]:
         """calculate the projected latitude and longitude onto the WGS84 centeroid and the altitude above the wgs84 centeroid.
