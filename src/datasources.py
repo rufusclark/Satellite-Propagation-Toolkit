@@ -92,7 +92,10 @@ class NORAD:
 
                 sats.extend([Sat(fields, source.group, source.category)
                             for fields in data])
-                print(f"Loaded {source.group} NORAD data sources")
+                print(f"Loaded {source.group} NORAD data sources {' '*40}",
+                      end="\r")
+
+        print(f"Loaded all {len(sources)} NORAD data sources {' '*40}")
 
         return Sats(sats)
 

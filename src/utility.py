@@ -2,11 +2,11 @@
 from skyfield.timelib import Time
 from skyfield.toposlib import GeographicPosition
 from skyfield.api import wgs84
-from .matrix import Matrix, MatrixFrame
+from .matrix import Matrix, Frame
 from .projectionmodels import BaseProjectionModel
 from .models import ts, Sats
 from .datasources import NORAD, SATCAT
-from .picointerface import PC
+from .deviceinterface import DeviceInterface
 
 
 def load_and_update_all_sats() -> Sats:
@@ -49,7 +49,7 @@ def dirname(model: BaseProjectionModel) -> str:
 
 def generate_image(sats: Sats, matrix: Matrix, model: BaseProjectionModel, t: Time = ts.now(), filename: str = "live capture.png"):
     # create frame for image
-    frame = MatrixFrame(matrix, t)
+    frame = Frame(matrix, t)
     # propogate sats and populate frame
     model.compute_sat_position(sats, frame.handle_pixel_modifiers, t)
     # save image
@@ -91,7 +91,7 @@ def generate_images(sats: Sats, matrix: Matrix, model: BaseProjectionModel, t_st
             break
 
         # create frame
-        frame = MatrixFrame(matrix, t)
+        frame = Frame(matrix, t)
         # propogate model and fill frame
         model.compute_sat_position(sats, frame.handle_pixel_modifiers, t)
         # save frame
@@ -106,65 +106,36 @@ def generate_images(sats: Sats, matrix: Matrix, model: BaseProjectionModel, t_st
             f"Last: {t1 - t0:.3f}s, Avg: {(t1 - t00)/count:.3f}s, Rate: {(1/((t1 - t00)/count))}/s")
 
 
-def REWRITE_frame_to_pico(f: MatrixFrame, pc: PC):
-    """hacky script to update matrix with data from matrix frame
+def _update_device_display(old_frame: Frame, new_frame: Frame, device: DeviceInterface):
+    """update device pixels that haven't been updated
 
     Args:
-        f: matrix frame
-        p: serial connection to pc
-    """
-    # TODO: Rewrite to send image to pico as png file???
-
-    def update_px(x, y):
-        rgb = f.get_pixel(x, y)
-        if not rgb.is_off():
-            pc.set_pixel_buffer(x, y, rgb)
-
-    pc.clear_matrix()
-    f._for_grid(update_px)
-    pc.update_matrix()
-
-
-def REWRITE_frame_to_pico_2(f0: MatrixFrame, f1: MatrixFrame, pc: PC):
-    """hacky script to update matrix with data compared to last frame
-
-    Args:
-        f0: last matrix frame
-        f1: next matrix frame
-        pc: serial connection to pc
+        old_frame: old frame
+        new_frame: new frame
+        device: DeviceInterface
     """
 
     def update_px(x, y):
-        rgb0 = f0.get_pixel(x, y)
-        rgb1 = f1.get_pixel(x, y)
+        old_pixel = old_frame.get_pixel(x, y)
+        new_pixel = new_frame.get_pixel(x, y)
 
-        if rgb0 != rgb1:
-            # TODO: Implement update pixel and buffer
-            pc.set_pixel_buffer(x, y, rgb1)
-            pc.update_matrix()
+        if old_pixel != new_pixel:
+            device.set_pixel(x, y, new_pixel)
 
-    f0._for_grid(update_px)
+    new_frame._for_grid(update_px)
 
 
-def update_pico_live(sats: Sats, matrix: Matrix, model: BaseProjectionModel, pc: PC):
-    """update pico with live data computed on pc
-
-    Args:
-        sats: Sats objects
-        matrix: Matrix object
-        model: Propogation model object
-        pc: PC Pico interface object
-    """
+def update_device_live(device: DeviceInterface, sats: Sats, matrix: Matrix, model: BaseProjectionModel):
     from time import monotonic
     try:
-        print("Starting live update to pico")
+        print("Starting live update to device")
 
         # timing code
         t00 = monotonic()
         n = 0
 
         # empty frame for comparison
-        last_frame = MatrixFrame(matrix, ts.now())
+        last_frame = Frame(matrix, ts.now())
 
         while True:
             # timing code
@@ -173,11 +144,12 @@ def update_pico_live(sats: Sats, matrix: Matrix, model: BaseProjectionModel, pc:
             # time of propogation
             t = ts.now()
             # create frame
-            frame = MatrixFrame(matrix, t)
-            # popogate model and fill frame
+            frame = Frame(matrix, t)
+            # propogate model and fill frame
+            # TODO: Make this less complicated
             model.compute_sat_position(sats, frame.handle_pixel_modifiers, t)
-            # send to pico
-            REWRITE_frame_to_pico_2(last_frame, frame, pc)
+            # update device display
+            _update_device_display(last_frame, frame, device)
 
             # save last frame
             last_frame = frame
@@ -186,10 +158,10 @@ def update_pico_live(sats: Sats, matrix: Matrix, model: BaseProjectionModel, pc:
             t1 = monotonic()
             n += 1
             print(
-                f"Last: {t1 - t0:.3f}s, Avg: {(t1 - t00)/n:.3f}s, Rate: {(1/((t1 - t00)/n))}/s")
+                f"Last: {t1 - t0:.3f}s, Avg: {(t1 - t00)/n:.3f}s, Rate: {(1/((t1 - t00)/n)):.3f}/s {' '*20}", end="\r")
 
     except KeyboardInterrupt:
-        print("Stopping live update to pico")
+        print("\nStopping live update to device")
 
 
 def get_estimated_latlon() -> GeographicPosition:

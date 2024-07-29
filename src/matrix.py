@@ -42,7 +42,7 @@ class Matrix:
         return f"<Matrix (w={self.width}, h={self.height})"
 
 
-class MatrixFrame:
+class Frame:
     """MatrixFrame about origin (top left) with conventional cartesian coordinates
     """
 
@@ -148,6 +148,6 @@ if __name__ == "__main__":
     ts = load.timescale()
 
     m = Matrix(4, 4)
-    f = MatrixFrame(m, ts.now())
+    f = Frame(m, ts.now())
 
     print(f)

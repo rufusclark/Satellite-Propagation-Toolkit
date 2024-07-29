@@ -17,9 +17,9 @@ EARTH_RADIUS = 6371  # [km] mean radius
 class BaseProjectionModel:
     name: str
 
-    def __init__(self, matrix: Matrix, origin: GeographicPosition, x_width: float = 0.5, y_width: float = 0.5) -> None:
+    def __init__(self, matrix: Matrix, observer: GeographicPosition, x_width: float = 0.5, y_width: float = 0.5) -> None:
         self._m = matrix
-        self.origin = origin
+        self.origin = observer
         self.x_width = x_width
         self.y_width = y_width
 
