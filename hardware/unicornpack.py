@@ -1,7 +1,6 @@
 """Client code for PIM546 Pimoroni Unicorn Pack"""
 
 import machine  # type: ignore
-from random import randint
 from picounicorn import PicoUnicorn
 import sys
 
