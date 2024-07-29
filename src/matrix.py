@@ -7,46 +7,12 @@ from .rgb import RGB
 from .analysis import BasePixelModifier, AltitudeModifier
 
 
-class Matrix:
-    def __init__(self, width: int = 16, height: int = 16, path: str = "./images/", pixel_modifiers: Sequence[BasePixelModifier] = []) -> None:
-        """creates a matrix object that it used to manage the size of matrix frame objects and file saving locations.
-
-        This is effectively a proxy for a LED matrix panel or picture
-
-        Args:
-            width: number of pixels wide. Defaults to 16.
-            height: number of pxiels high. Defaults to 16.
-            path: base directory for saved images. Defaults to "./images/".
-            pixel_modifiers: list of pixel modifiers for support for changing pixel values based on sat metadata
-        """
-        self.width = width
-        self.height = height
-        self.path = path
-        self._pixel_modifiers = pixel_modifiers
-
-    @property
-    def path(self) -> str:
-        return self._path
-
-    @path.setter
-    def path(self, path) -> None:
-        import os
-
-        # create directory if not exists
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        self._path = path
-
-    def __repr__(self) -> str:
-        return f"<Matrix (w={self.width}, h={self.height})"
-
-
 class Frame:
     """MatrixFrame about origin (top left) with conventional cartesian coordinates
     """
 
-    def __init__(self, m: Matrix, time: Time) -> None:
+    def __init__(self, m: "Matrix", time: Time) -> None:
+        # TODO: Create a new frame and propogate all objects inside it
         self._m = m
         self.time = time
         self._pixels: list[RGB] = [
@@ -141,6 +107,41 @@ class Frame:
         filepath = self._m.path + filename
         png.from_array(pixels, "RGB").save(filepath)
         print(f"Saved png: {filepath}")
+
+
+class Matrix:
+    def __init__(self, width: int = 16, height: int = 16, path: str = "./images/", pixel_modifiers: Sequence[BasePixelModifier] = []) -> None:
+        """creates a matrix object that it used to manage the size of matrix frame objects and file saving locations.
+
+        This is effectively a proxy for a LED matrix panel or picture
+
+        Args:
+            width: number of pixels wide. Defaults to 16.
+            height: number of pxiels high. Defaults to 16.
+            path: base directory for saved images. Defaults to "./images/".
+            pixel_modifiers: list of pixel modifiers for support for changing pixel values based on sat metadata
+        """
+        self.width = width
+        self.height = height
+        self.path = path
+        self._pixel_modifiers = pixel_modifiers
+
+    @property
+    def path(self) -> str:
+        return self._path
+
+    @path.setter
+    def path(self, path) -> None:
+        import os
+
+        # create directory if not exists
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        self._path = path
+
+    def __repr__(self) -> str:
+        return f"<Matrix (w={self.width}, h={self.height})"
 
 
 if __name__ == "__main__":

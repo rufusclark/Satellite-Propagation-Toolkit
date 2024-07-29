@@ -78,11 +78,5 @@ if __name__ == "__main__":
 
     print(projection_model.info())
 
-    # init connection to pico and send live projections
-    pc = PC()
-    pc.clear_matrix()
-    update_pico_live_2(sats, matrix, projection_model, pc)
-
-    # while True:
-    #     generate_image(sats, matrix, projection_model,
-    #                    ts.now())
+    while True:
+        generate_image(sats, matrix, projection_model, ts.now())
