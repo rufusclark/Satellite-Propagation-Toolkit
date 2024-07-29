@@ -1,5 +1,6 @@
 """contains grids for projecting satellite locations onto square grids"""
 from typing import Callable, Tuple, Any
+from typing_extensions import Self
 
 import math
 
@@ -54,10 +55,10 @@ class GeocentricProjectionModel(BaseProjectionModel):
         from .models import Orbits
         orbits = Orbits()
         orbit_data = [
-            f"At {orbit.name} ({orbit.alt}km), effective FoV is {self.effective_FoV(orbit.alt)} degrees and minimum FoV is {self.minimum_FoV(orbit.alt)} degrees" for orbit in orbits.orbits]
+            f"At {orbit.name} ({orbit.alt}km), effective FoV is {self.effective_FoV(orbit.alt):.0f} degrees and minimum FoV is {self.minimum_FoV(orbit.alt):.0f} degrees" for orbit in orbits.orbits]
         new_line = "\n"
 
-        return f"Geocentric Projection about {self.origin.latitude.degrees:.3f} degrees North and {self.origin.longitude.degrees:.3f} degrees East where each cell has a width of {self.x_width} degrees and height of {self.y_width} degrees \n{new_line.join(orbit_data)}"
+        return f"Geocentric Projection about {self.origin.latitude.degrees:.2f} degrees North and {self.origin.longitude.degrees:.2f} degrees East where each cell has a width of {self.x_width} degrees and height of {self.y_width} degrees \n{new_line.join(orbit_data)}"
 
     def compute_sat_position(self, sats: Sats, fn: Callable[[int, int, Sat, dict[str, Any]], None], t: Time = ts.now()) -> None:
         """checks whether each sat in sats falls within the grid box when propogated to a given time defined about the center of the Earth above the origin location. This checks whether each satellite is within a given latitude and longitude range around the observer.
@@ -226,6 +227,22 @@ class TopocentricProjectionModel(BaseProjectionModel):
 
     def info(self) -> str:
         return f"Topocentric Projection about {self.origin.latitude.degrees:.3f} degrees North and {self.origin.longitude.degrees:.3f} degrees East where each cell has a width of {self.x_width} degrees and height of {self.y_width} degrees with an effective Field of View of {self.effective_FoV():.0f} degrees and minimum Field of View of {self.minimum_FoV():.0f} degrees"
+
+    @classmethod
+    def from_FoV(cls, m: Matrix, obs: GeographicPosition, effective_FoV: float) -> Self:
+        """create a new topocentric projection model based on the area effective FoV
+
+        Args:
+            m: Matrix
+            obs: observer location
+            effective_FoV: degrees
+
+        Returns:
+            TopocentricProjectionModel object
+        """
+        cell_width, cell_height = cls.width_and_height_from_FoV(
+            m, effective_FoV)
+        return cls(m, obs, cell_width, cell_height)
 
     def compute_sat_position(self, sats: Sats, fn: Callable[[int, int, Sat, dict[str, Any]], None], t: Time = ts.now()) -> None:
         """checks whether each sat in sats falls with the grid box when progtated to a given time defined about the origin (topocentric), where the angels are perpendicular to themselves in the North and East directions. This gives an effective field of view from the origin/observer, given by north and south angles normal to the origin/observers point on the Earth.

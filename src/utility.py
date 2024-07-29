@@ -1,9 +1,7 @@
 """contains useful utilities"""
-import geocoder
 from skyfield.timelib import Time
 from skyfield.toposlib import GeographicPosition
 from skyfield.api import wgs84
-from typing import Literal
 from .matrix import Matrix, MatrixFrame
 from .projectionmodels import BaseProjectionModel
 from .models import ts, Sats

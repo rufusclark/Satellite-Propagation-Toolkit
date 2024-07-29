@@ -50,9 +50,16 @@ cat5 = [
     )
 ]
 
+# Mega-constallations
+cat6 = [
+    TagPixelModifier("starlink", RGB(100, 0, 0)),
+    TagPixelModifier("oneweb", RGB(0, 100, 0)),
+    NotTagPixelMofidier(["starlink", "oneweb"], RGB(0, 0, 100))
+]
+
 if __name__ == "__main__":
     obs_mecd = wgs84.latlon(53.46998696814808, -2.233615253169161)
-    obs = get_estimated_latlon()
+    # obs = get_estimated_latlon()
 
     # load all sat data
     sats = load_and_update_all_sats()
@@ -63,17 +70,19 @@ if __name__ == "__main__":
     matrix = Matrix(16, 16, pixel_modifiers=cat0)
 
     # define grid model
-    cell_width, cell_height = TopocentricProjectionModel.width_and_height_from_FoV(
-        matrix, 60)
-    projection_model = TopocentricProjectionModel(
-        matrix, obs_mecd, cell_width, cell_height)
+    # projection_model = GeocentricProjectionModel(
+    # matrix, obs_mecd, 0.5, 0.5)
+
+    projection_model = TopocentricProjectionModel.from_FoV(
+        matrix, obs_mecd, 90)
 
     print(projection_model.info())
 
-    # init connection to pico
+    # init connection to pico and send live projections
     pc = PC()
-
+    pc.clear_matrix()
     update_pico_live(sats, matrix, projection_model, pc)
 
     # while True:
-    #     generate_image(sats, matrix, projection_model, ts.now())
+    #     generate_image(sats, matrix, projection_model,
+    #                    ts.now())
