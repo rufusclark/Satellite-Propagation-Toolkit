@@ -19,6 +19,19 @@ class Sat:
         self._sat = EarthSatellite.from_omm(ts, fields)
         self.launch_date = None
 
+    def info(self) -> str:
+        """return information about each satellite
+
+        Returns:
+            str information output
+        """
+        if self.launch_date:
+            launched = f" (launched {self.launch_date.date().isoformat()})"
+        else:
+            launched = ""
+
+        return f"{self.name} {launched}\n  days since epoch: {self.days_since_epoch:.2f}\n  tags: {', '.join(self.tags)}"
+
     def add_tag(self, tag: str) -> None:
         """add an additional tag to the sat if it doesn't already exist
 
@@ -296,6 +309,15 @@ class SatPosition:
         self.y = y
         self.altitude = altiude
         self.distance = distance
+
+    def info(self) -> str:
+        addon = ""
+        if self.altitude != -1:
+            addon += f"\n  altitude: {self.altitude:.0f}km"
+        if self.distance != -1:
+            addon += f"\n  distance from observer: {self.distance:.0f}km"
+
+        return f"{self.sat.info()}\n  grid position: ({self.x}, {self.y}){addon}\n"
 
 
 class Orbit:
