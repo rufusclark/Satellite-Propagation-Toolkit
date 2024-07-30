@@ -53,7 +53,7 @@ class SatFrame:
         Returns:
             str information output
         """
-        return f"Sat Frame (sats: {self.number_of_sats})\n{''.join([sat.info() for sat in self.sats])}"
+        return f"Sat Frame (sats: {self.number_of_sats})\n  propogation time: {self.time.utc_strftime('%Y-%m-%d %H:%M:%S')}\n  {self.model._matrix.info()}\n{self.model.info()}\n{''.join([sat.info() for sat in self.sats])}"
 
     def render(self, modifiers: Sequence[BasePixelModifier]) -> ImageFrame:
         """render a new ImageFrame object from this object based on the sats in this frame and their tags and other data
@@ -64,7 +64,15 @@ class SatFrame:
         Returns:
             New ImageFrame object
         """
-        frame = ImageFrame(self.model._matrix, self.time)
+        # generate appropriate info
+        modifier_str = "Key\n  " + \
+            "\n  ".join([modifier.info() for modifier in modifiers])
+
+        # create new image frame
+        frame = ImageFrame(self.model._matrix, self.time,
+                           _sat_frame=self, _modifier_info=modifier_str)
+
+        # render frame
         for sat in self.sats:
             rgb = frame.get_pixel(sat.x, sat.y)
             for modifier in modifiers:
@@ -126,17 +134,23 @@ class BaseProjectionModel:
 
 
 class GeocentricProjectionModel(BaseProjectionModel):
-    """Geocentric Grid over an origin on the surface of the Earth where each row and col represents a specified change in latitude and longitude"""
+    """Geocentric Grid above an observer on the surface of the Earth and about the surface of the Earth where each row and col represents a given number of degrres change in latitude and longitude respectively"""
     name = "geo"
 
     def info(self) -> str:
         from .models import Orbits
         orbits = Orbits()
-        orbit_data = [
-            f"At {orbit.name} ({orbit.alt}km), effective FoV is {self.equivalent_FoV(orbit.alt):.0f} degrees and minimum FoV is {self.minimum_FoV(orbit.alt):.0f} degrees" for orbit in orbits.orbits]
-        new_line = "\n"
 
-        return f"Geocentric Projection about {self.origin.latitude.degrees:.2f} degrees North and {self.origin.longitude.degrees:.2f} degrees East where each cell has a width of {self.x_width} degrees and height of {self.y_width} degrees \n{new_line.join(orbit_data)}"
+        lat = self.origin.latitude.degrees
+        lon = self.origin.longitude.degrees
+        lat_str = f"{lat:.2f}°N" if lat > 0 else f"{abs(lat):.2f}°S"
+        lon_str = f"{lon:.2f}°E" if lon > 0 else f"{abs(lon):.2f}°W"
+
+        orbit_str = [
+            f'  {orbit.name} - {orbit.alt}km - minimum FoV {self.minimum_FoV(orbit.alt):.0f}° - area equivalent FoV {self.equivalent_FoV(orbit.alt):.0f}°\n' for orbit in orbits.orbits
+        ]
+
+        return f"Geocentric Projection\n  observer: {lat_str}, {lon_str}\n  cell width: {self.y_width:.2f}°N/S, {self.x_width:.2f}°E/W\n  field of view depends on altitude as observer and oribit are not co-located\n{''.join(orbit_str)}"
 
     def generate_sat_frame(self, t: Time) -> SatFrame:
         """checks whether each sat in sats falls within the grid box when propogated to a given time defined about the center of the Earth above the origin location. This checks whether each satellite is within a given latitude and longitude range around the observer.
@@ -260,7 +274,12 @@ class TopocentricProjectionModel(BaseProjectionModel):
     name = "topo"
 
     def info(self) -> str:
-        return f"Topocentric Projection about {self.origin.latitude.degrees:.3f} degrees North and {self.origin.longitude.degrees:.3f} degrees East where each cell has a width of {self.x_width} degrees and height of {self.y_width} degrees with an effective Field of View of {self.equivalent_FoV():.0f} degrees and minimum Field of View of {self.minimum_FoV():.0f} degrees"
+        lat = self.origin.latitude.degrees
+        lon = self.origin.longitude.degrees
+        lat_str = f"{lat:.2f}°N" if lat > 0 else f"{abs(lat):.2f}°S"
+        lon_str = f"{lon:.2f}°E" if lon > 0 else f"{abs(lon):.2f}°W"
+
+        return f"Topocentric Projection\n  observer: {lat_str}, {lon_str}\n  cell width: {self.y_width:.2f}°N/S, {self.x_width:.2f}°E/W\n  minimum FoV: {self.minimum_FoV():.2f}°\n  equivalent FoV: {self.equivalent_FoV():.2f}°\n"
 
     @classmethod
     def _cell_width_and_height_from_FoV(cls, matrix: Matrix, FoV: float) -> tuple[float, float]:

@@ -1,15 +1,19 @@
 """code and utilities to work with LED matrix data, generate images and more"""
+from typing import TYPE_CHECKING
+
 from skyfield.timelib import Time
 
 from .rgb import RGB
 from .models import ts
+if TYPE_CHECKING:
+    from .projectionmodels import SatFrame
 
 
 class ImageFrame:
     """MatrixFrame about origin (top left) with conventional cartesian coordinates
     """
 
-    def __init__(self, matrix: "Matrix", time: Time) -> None:
+    def __init__(self, matrix: "Matrix", time: Time, *, _sat_frame: "SatFrame | None" = None, _modifier_info: str = "") -> None:
         """generate an empty frame from a matrix with a given time.
 
         Args:
@@ -20,11 +24,11 @@ class ImageFrame:
         self._matrix = matrix
         self.time = time
         self._pixels: list[RGB] = [RGB() for _ in range(len(matrix))]
+        self._sat_frame: "SatFrame" = _sat_frame  # type: ignore
+        self._modifier_info = _modifier_info
 
     def info(self) -> str:
-        raise NotImplementedError()
-        # TODO: Implement descriptionm of frame
-        pass
+        return self._modifier_info + "\n" + self._sat_frame.info()
 
     @property
     def unix_timestamp(self) -> float:
@@ -120,6 +124,9 @@ class Matrix:
         self.width = width
         self.height = height
         self.path = path
+
+    def info(self) -> str:
+        return f"matrix size: ({self.width} x {self.height})"
 
     def _empty_frame(self) -> ImageFrame:
         """create an empty frame from the matrix

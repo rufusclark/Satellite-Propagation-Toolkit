@@ -21,6 +21,9 @@ class BasePixelModifier:
         """
         raise NotImplementedError
 
+    def info(self) -> str:
+        raise NotImplementedError()
+
 
 class AlwaysPixelModifier(BasePixelModifier):
     """always changes rgb value of pixel for sat"""
@@ -31,6 +34,9 @@ class AlwaysPixelModifier(BasePixelModifier):
 
     def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
         return rgb + self.modifier
+
+    def info(self) -> str:
+        return f"{self.modifier.info()} always"
 
 
 class TagPixelModifier(BasePixelModifier):
@@ -55,6 +61,9 @@ class TagPixelModifier(BasePixelModifier):
             rgb += self.modifer
         return rgb
 
+    def info(self) -> str:
+        return f"{self.modifer} if includes one of following tags: {', '.join(self.tags)}"
+
 
 class NotTagPixelMofidier(TagPixelModifier):
     """change rgb value based on not including any of these sat tags"""
@@ -72,6 +81,9 @@ class NotTagPixelMofidier(TagPixelModifier):
         if not any(tag in sat.sat.tags for tag in self.tags):
             rgb += self.modifer
         return rgb
+
+    def info(self) -> str:
+        return f"{self.modifer} if doesn't include any of following tags: {', '.join(self.tags)}"
 
 
 class LaunchDateModifier(BasePixelModifier):
@@ -96,6 +108,9 @@ class LaunchDateModifier(BasePixelModifier):
             rgb += self.modifier
         return rgb
 
+    def info(self) -> str:
+        return f"{self.modifier.info()} if launch date is between {self.min_datetime.date().isoformat()} and {self.max_datetime.date().isoformat()}"
+
 
 class AltitudeModifier(BasePixelModifier):
     def __init__(self, min_alt: float, max_alt: float, modifier: RGB) -> None:
@@ -119,10 +134,13 @@ class AltitudeModifier(BasePixelModifier):
             rgb += self.modifier
         return rgb
 
+    def info(self) -> str:
+        return f"{self.modifier.info()} if altitude is between {self.min_alt}km and {self.max_alt}km"
+
 
 class DistanceModifier(BasePixelModifier):
     def __init__(self, min_distance: float, max_distance: float, modifier: RGB) -> None:
-        """create a new pixel modifier that will change the colour of the pixel by adding the modifier to the current pixel if the object has a distance from the origin between the given distances in km
+        """create a new pixel modifier that will change the colour of the pixel by adding the modifier to the current pixel if the object has a distance from the observer between the given distances in km
 
         Args:
             min_distance: minimum distance [km]
@@ -141,3 +159,6 @@ class DistanceModifier(BasePixelModifier):
         if self.min_distance < sat.distance and self.max_distance > sat.distance:
             rgb += self.modifier
         return rgb
+
+    def info(self) -> str:
+        return f"{self.modifier.info()} if distance from observer is between {self.min_distance}km and {self.max_distance}km"

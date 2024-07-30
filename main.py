@@ -68,16 +68,14 @@ if __name__ == "__main__":
     matrix = Matrix(16, 16)
 
     # define grid model
-    model = TopocentricProjectionModel.from_FoV(matrix, sats, obs_mecd, 30)
-
-    print(model.info())
+    model = TopocentricProjectionModel.from_FoV(matrix, sats, obs_mecd, 20)
 
     # propogate and generate Sat frame
     sat_frame = model.generate_sat_frame(ts.now())
 
-    print(sat_frame.info())
-
     # render image
-    image_frame = sat_frame.render(cat0)
+    image_frame = sat_frame.render(cat4)
+
+    print(image_frame.info())
 
     image_frame.to_png()

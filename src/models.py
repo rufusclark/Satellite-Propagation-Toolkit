@@ -2,7 +2,7 @@
 from typing import Callable, List, Dict, Tuple
 from typing_extensions import Self
 
-from datetime import datetime
+from datetime import datetime, date
 
 from skyfield.api import EarthSatellite, load, wgs84
 from skyfield.toposlib import GeographicPosition
@@ -26,9 +26,9 @@ class Sat:
             str information output
         """
         if self.launch_date:
-            launched = f" (launched {self.launch_date.date().isoformat()})"
+            launched = f" (launched {self.launch_date.date().isoformat()}, {(date.today() - self.launch_date.date()).days} days ago)"
         else:
-            launched = ""
+            launched = "(launched unknown)"
 
         return f"{self.name} {launched}\n  days since epoch: {self.days_since_epoch:.2f}\n  tags: {', '.join(self.tags)}"
 
@@ -200,8 +200,9 @@ class Sat:
 
 
 class Sats:
-    # Container for list of sets with helpful filter functions
-    # TODO: Implement a version that converses memory by deleting old data
+    """Container for multiple Sat objects with helpful methods for filtering, sorting and handling Sat data
+    """
+
     def __init__(self, sats: List[Sat]) -> None:
         self._sats = sats
 

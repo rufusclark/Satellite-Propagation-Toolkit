@@ -31,3 +31,13 @@ class RGB:
         self.G = max(0, min(255, self.G + other.G))
         self.B = max(0, min(255, self.B + other.B))
         return self
+
+    def info(self) -> str:
+        out = ""
+        if self.R:
+            out += f"red (+{self.R})"
+        if self.G:
+            out += f"green (+{self.G})"
+        if self.B:
+            out += f"blue (+{self.B})"
+        return out
