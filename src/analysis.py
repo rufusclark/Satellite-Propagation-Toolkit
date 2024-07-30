@@ -1,6 +1,6 @@
 """contains code for analysing propogation data"""
 from .rgb import RGB
-from .models import Sat
+from .models import Sat, SatPosition
 from datetime import datetime
 from typing import Any
 
@@ -9,7 +9,7 @@ class BasePixelModifier:
     """base class for modifiers that change rgb values based on Sat tags or otherwise
     """
 
-    def handle(self, sat: Sat, rgb: RGB, args: dict[str, Any]) -> RGB:
+    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
         """handle the modifier, check if the sat fits the criterium and return the new rgb values as appropriately
 
         Args:
@@ -29,7 +29,7 @@ class AlwaysPixelModifier(BasePixelModifier):
         """create a new pixel modifier that will always change the colour of the pixel by adding the modifier to the current pixel if any of the tags match the sat"""
         self.modifier = modifier
 
-    def handle(self, sat: Sat, rgb: RGB, args: dict[str, Any]) -> RGB:
+    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
         return rgb + self.modifier
 
 
@@ -50,8 +50,8 @@ class TagPixelModifier(BasePixelModifier):
             self.tags = [tag.lower() for tag in tags]
         self.modifer = modifer
 
-    def handle(self, sat: Sat, rgb: RGB, args: dict[str, Any]) -> RGB:
-        if any(tag in sat.tags for tag in self.tags):
+    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
+        if any(tag in sat.sat.tags for tag in self.tags):
             rgb += self.modifer
         return rgb
 
@@ -68,8 +68,8 @@ class NotTagPixelMofidier(TagPixelModifier):
         """
         super().__init__(tags, modifer)
 
-    def handle(self, sat: Sat, rgb: RGB, args: dict[str, Any]) -> RGB:
-        if not any(tag in sat.tags for tag in self.tags):
+    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
+        if not any(tag in sat.sat.tags for tag in self.tags):
             rgb += self.modifer
         return rgb
 
@@ -89,10 +89,10 @@ class LaunchDateModifier(BasePixelModifier):
         self.max_datetime = max_datetime
         self.modifier = modifier
 
-    def handle(self, sat: Sat, rgb: RGB, args: dict[str, Any]) -> RGB:
-        if not sat.launch_date:
+    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
+        if not sat.sat.launch_date:
             return rgb
-        if self.min_datetime < sat.launch_date and self.max_datetime > sat.launch_date:
+        if self.min_datetime < sat.sat.launch_date and self.max_datetime > sat.sat.launch_date:
             rgb += self.modifier
         return rgb
 
@@ -110,13 +110,12 @@ class AltitudeModifier(BasePixelModifier):
         self.max_alt = max_alt
         self.modifier = modifier
 
-    def handle(self, sat: Sat, rgb: RGB, args: dict[str, Any]) -> RGB:
-        if "altitude" not in args:
+    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
+        if sat.altitude == -1:
             raise Warning(
-                "No altitude returned in args, orbit altitude modifier is not support for this reference frame")
+                "No altitude specified with sat, orbit altitude modifier is not support for this reference frame")
             return rgb
-        alt = args['altitude']
-        if self.min_alt < alt and self.max_alt > alt:
+        if self.min_alt < sat.altitude and self.max_alt > sat.altitude:
             rgb += self.modifier
         return rgb
 
@@ -134,12 +133,11 @@ class DistanceModifier(BasePixelModifier):
         self.max_distance = max_distance
         self.modifier = modifier
 
-    def handle(self, sat: Sat, rgb: RGB, args: dict[str, Any]) -> RGB:
-        if "distance" not in args:
+    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
+        if sat.distance == -1:
             raise Warning(
-                "No distance returned in args, orbit altitude modifier is not support for this reference frame")
+                "No distance specified with sat, orbit altitude modifier is not support for this reference frame")
             return rgb
-        distance = args["distance"]
-        if self.min_distance < distance and self.max_distance > distance:
+        if self.min_distance < sat.distance and self.max_distance > sat.distance:
             rgb += self.modifier
         return rgb

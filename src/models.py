@@ -203,6 +203,12 @@ class Sats:
     def __len__(self) -> int:
         return len(self.sats)
 
+    def __add__(self, other: Self) -> Self:
+        return self.__class__(self._sats + other._sats)
+
+    def append(self, other: Sat):
+        self._sats.append(other)
+
     def add_tags_from_SATCAT(self, satcat) -> None:
         """add additional tags to sats from SATCAT data"""
         for sat in self.sats:
@@ -279,6 +285,17 @@ class Sats:
         tags.sort()
         for tag in tags:
             print(tag, end=", ")
+
+
+class SatPosition:
+    """Represents a satellite at an instantaneous time and it's location within a model"""
+
+    def __init__(self, sat: Sat, x: int, y: int, *, altiude: float = -1, distance: float = -1):
+        self.sat = sat
+        self.x = x
+        self.y = y
+        self.altitude = altiude
+        self.distance = distance
 
 
 class Orbit:

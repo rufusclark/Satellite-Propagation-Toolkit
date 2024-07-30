@@ -1,5 +1,3 @@
-from skyfield.api import wgs84
-
 from src import *
 
 from datetime import datetime
@@ -62,21 +60,22 @@ if __name__ == "__main__":
     # obs = get_estimated_latlon()
 
     # load all sat data
-    sats = load_and_update_all_sats()
+    sats = init_sats()
 
     # sats.print_all_tags()
 
     # define matrix size
-    matrix = Matrix(16, 16, pixel_modifiers=cat0)
+    matrix = Matrix(16, 16)
 
     # define grid model
-    # projection_model = GeocentricProjectionModel(
-    # matrix, obs_mecd, 0.5, 0.5)
+    model = TopocentricProjectionModel.from_FoV(matrix, sats, obs_mecd, 400)
 
-    projection_model = TopocentricProjectionModel.from_FoV(
-        matrix, obs_mecd, 90)
+    print(model.info())
 
-    print(projection_model.info())
+    # propogate and generate Sat frame
+    sat_frame = model.generate_sat_frame(ts.now())
 
-    while True:
-        generate_image(sats, matrix, projection_model, ts.now())
+    # render image
+    image_frame = sat_frame.render(cat0)
+
+    image_frame.to_png()

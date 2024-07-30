@@ -1,22 +1,30 @@
 """code and utilities to work with LED matrix data, generate images and more"""
-from typing import Sequence, Any
 from skyfield.timelib import Time
 
-from .models import Sat
 from .rgb import RGB
-from .analysis import BasePixelModifier, AltitudeModifier
+from .models import ts
 
 
-class Frame:
+class ImageFrame:
     """MatrixFrame about origin (top left) with conventional cartesian coordinates
     """
 
-    def __init__(self, m: "Matrix", time: Time) -> None:
-        # TODO: Create a new frame and propogate all objects inside it
-        self._m = m
+    def __init__(self, matrix: "Matrix", time: Time) -> None:
+        """generate an empty frame from a matrix with a given time.
+
+        Args:
+            matrix: Matrix
+            time: skyfield Time object
+        """
+        # ? Consider adding a self._model object
+        self._matrix = matrix
         self.time = time
-        self._pixels: list[RGB] = [
-            RGB() for _ in range(self._m.width * self._m.height)]
+        self._pixels: list[RGB] = [RGB() for _ in range(len(matrix))]
+
+    def info(self) -> str:
+        raise NotImplementedError()
+        # TODO: Implement descriptionm of frame
+        pass
 
     @property
     def unix_timestamp(self) -> float:
@@ -36,31 +44,18 @@ class Frame:
         """
         return int(self.unix_timestamp)
 
-    def _pixel_idx(self, x: int, y: int) -> int:
-        return (y * self._m.width) + x
+    def _idx(self, x: int, y: int) -> int:
+        return (y * self._matrix.width) + x
 
     def set_pixel(self, x: int, y: int, rgb: RGB) -> None:
-        self._pixels[self._pixel_idx(x, y)] = rgb
+        self._pixels[self._idx(x, y)] = rgb
 
     def get_pixel(self, x: int, y: int) -> RGB:
-        return self._pixels[self._pixel_idx(x, y)]
-
-    def handle_pixel_modifiers(self, x: int, y: int, sat: Sat, args: dict[str, Any]):
-        """conditionally change the value of a pixel based on conditional modifier logic from Matrix
-
-        Args:
-            x: x position
-            y: y position
-            sat: Sat object
-        """
-        for modifier in self._m._pixel_modifiers:
-            rgb = self.get_pixel(x, y)
-            rgb = modifier.handle(sat, rgb, args)
-            self.set_pixel(x, y, rgb)
+        return self._pixels[self._idx(x, y)]
 
     def _for_grid(self, fn) -> None:
-        for y in range(self._m.height):
-            for x in range(self._m.width):
+        for y in range(self._matrix.height):
+            for x in range(self._matrix.width):
                 fn(x, y)
 
     def _print_grid(self, fn) -> None:
@@ -79,8 +74,8 @@ class Frame:
         Args:
             fn: function to print output
         """
-        for y in range(self._m.height):
-            for x in range(self._m.width):
+        for y in range(self._matrix.height):
+            for x in range(self._matrix.width):
                 print(fn(x, y), end=", ")
             print()
 
@@ -91,26 +86,27 @@ class Frame:
         self._print_grid(lambda x, y: f"{x, y}")
 
     def __repr__(self) -> str:
-        return f"<MatrixFrame t={self.time} {self._m}>"
+        return f"<MatrixFrame t={self.time} {self._matrix}>"
 
-    def to_png(self, filename) -> None:
+    def to_png(self, filename: str = "image.png") -> None:
+        # TODO: generage name based on model details and or add to metadata
         import png
 
         pixels = []
 
-        for y in range(self._m.height):
+        for y in range(self._matrix.height):
             row = []
-            for x in range(self._m.width):
+            for x in range(self._matrix.width):
                 row.extend(self.get_pixel(x, y).to_tuple())
             pixels.append(row)
 
-        filepath = self._m.path + filename
+        filepath = self._matrix.path + filename
         png.from_array(pixels, "RGB").save(filepath)
         print(f"Saved png: {filepath}")
 
 
 class Matrix:
-    def __init__(self, width: int = 16, height: int = 16, path: str = "./images/", pixel_modifiers: Sequence[BasePixelModifier] = []) -> None:
+    def __init__(self, width: int = 16, height: int = 16, path: str = "./images/") -> None:
         """creates a matrix object that it used to manage the size of matrix frame objects and file saving locations.
 
         This is effectively a proxy for a LED matrix panel or picture
@@ -124,7 +120,17 @@ class Matrix:
         self.width = width
         self.height = height
         self.path = path
-        self._pixel_modifiers = pixel_modifiers
+
+    def _empty_frame(self) -> ImageFrame:
+        """create an empty frame from the matrix
+
+        Returns:
+            Frame
+        """
+        return ImageFrame(self, Time(ts, 0))
+
+    def __len__(self) -> int:
+        return self.width * self.height
 
     @property
     def path(self) -> str:
@@ -149,6 +155,6 @@ if __name__ == "__main__":
     ts = load.timescale()
 
     m = Matrix(4, 4)
-    f = Frame(m, ts.now())
+    f = ImageFrame(m, ts.now())
 
     print(f)

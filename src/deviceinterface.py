@@ -1,7 +1,7 @@
 """handles communication with RPi Pico over serial and control of the Pico device"""
 from typing import List, Any, Sequence
 
-from .matrix import RGB
+from .matrix import RGB, ImageFrame
 
 import serial
 
@@ -14,6 +14,8 @@ class DeviceInterface:
             port = self._autoport()
 
         self.conn = serial.Serial(port, baudrate)
+
+        self._last_frame: ImageFrame = None  # type:ignore
 
         print(f"Connected to device on port: {port}")
 
@@ -33,7 +35,7 @@ class DeviceInterface:
         except Exception as e:
             raise Exception("No ports found", e)
 
-    def _send_csv(self, op: int, *args):
+    def _send_csv(self, op: int, *args) -> None:
         """send command over serial to device
 
         Args:
@@ -43,7 +45,7 @@ class DeviceInterface:
         self.conn.write(
             f"{op},{','.join([str(arg) for arg in args])}\n".encode(self._encoding))
 
-    def set_pixel(self, x: int, y: int, rgb: RGB):
+    def set_pixel(self, x: int, y: int, rgb: RGB) -> None:
         """set the devices pixel to colour rgb
 
         Args:
@@ -53,7 +55,9 @@ class DeviceInterface:
         """
         self._send_csv(1, x, y, *rgb.to_tuple())
 
-    def clear(self):
+    def clear(self) -> None:
+        """clear the display
+        """
         self._send_csv(2)
 
     def display_dimensions(self) -> tuple[int, int]:
@@ -70,3 +74,40 @@ class DeviceInterface:
                 args = raw.decode(self._encoding).strip(
                     "\r\n").strip().split(",")
                 return int(args[0]), int(args[1])
+
+    def set_time(self, unix_timestamp: int) -> None:
+        """set the time on the device
+
+        Args:
+            unix_timestamp: unix timestamp seconds
+        """
+        self._send_csv(4, unix_timestamp)
+
+    def set_current_time(self) -> None:
+        """set the time on the device to the current time
+        """
+        import time
+        self.set_time(int(time.time()))
+
+    def upload_frame(self, frame: ImageFrame) -> None:
+        """upload and display the frame on the device
+
+        Args:
+            frame: ImageFrame to be displayed
+        """
+        # create a blank frame for comparison if it doesn't exist
+        if not self._last_frame:
+            self._last_frame = frame._matrix._empty_frame()
+            self.clear()
+
+        # update pixels that require update
+        def update_px(x, y):
+            last_pixel = self._last_frame.get_pixel(x, y)
+            pixel = frame.get_pixel(x, y)
+
+            if last_pixel != pixel:
+                self.set_pixel(x, y, pixel)
+        frame._for_grid(update_px)
+
+        # save frame for next update
+        self._last_frame = frame

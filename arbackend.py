@@ -6,7 +6,7 @@ import os
 import math
 
 if __name__ == "__main__":
-    sats = load_and_update_all_sats()
+    sats = init_sats()
 
     # set propogation time
     t = ts.now()

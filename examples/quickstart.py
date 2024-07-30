@@ -5,7 +5,7 @@ lon = -2.233615253169161
 
 observer = wgs84.latlon(lat, lon)
 
-sats = load_and_update_all_sats()
+sats = init_sats()
 
 px_width = 32
 px_height = 32

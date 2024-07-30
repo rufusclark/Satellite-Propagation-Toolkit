@@ -237,3 +237,29 @@ class SATCAT:
         if orbit_type in lookup_table:
             return lookup_table[orbit_type]
         return ""
+
+
+def init_sats() -> Sats:
+    """load and sats, update data from CelesTrak (NORAD) and add metadata from SATCAT
+
+    Note this function also removes all sats with data older than 14 days as they will give inaccurate propogation data.
+
+    Greater control is available my calling the methods individually
+
+    Returns:
+        Sats object containing all objects
+    """
+    # load all sats and update if old
+    norad = NORAD()
+    norad.update_sources()
+    sats = norad.load_all_sats().filter_old()
+
+    # load all SATCAT data and update if old
+    satcat = SATCAT()
+    satcat.update_sources()
+    satcat_data = satcat.load()
+
+    # add tags to sats from SATCAT
+    sats.add_tags_from_SATCAT(satcat_data)
+
+    return sats
