@@ -25,3 +25,27 @@ def get_estimated_latlon() -> GeographicPosition:
     """
     import geocoder
     return wgs84.latlon(*geocoder.ip('me').latlng)
+
+
+def png_to_gif(png_path: str, gif_filename: str = "./images/out.gif", duration_ms: int = 1000):
+    # TODO: Proper support for generating GIF's
+    import imageio.v3 as iio
+    import numpy as np
+    from os import listdir
+    from os.path import isfile, join
+    from pygifsicle import optimize
+
+    filenames = ["" for _ in range(100)]
+    for f in listdir(png_path):
+        if isfile(join(png_path, f)):
+            filenames[int(f.strip(".png"))] = png_path + "/" + f
+
+    # save frames from images
+    frames = np.stack([iio.imread(filename) for filename in filenames])
+
+    # generate gif
+    iio.imwrite(gif_filename, frames, duration=duration_ms, loop=0)
+
+    # TODO: Validate that the outputs are actually smaller
+    # optimise gif size
+    optimize(gif_filename)
