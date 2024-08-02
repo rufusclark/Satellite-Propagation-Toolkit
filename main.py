@@ -1,6 +1,9 @@
 from src import *
 
-from datetime import datetime
+from src.utility import png_to_gif
+
+from datetime import datetime, timedelta
+from time import monotonic
 
 # Set white if any sat is present
 cat0 = [
@@ -65,17 +68,52 @@ if __name__ == "__main__":
     # sats.print_all_tags()
 
     # define matrix size
-    matrix = Matrix(16, 16)
+    matrix = Matrix(128, 128)
 
     # define grid model
-    model = TopocentricProjectionModel.from_FoV(matrix, sats, obs_mecd, 20)
+    model = TopocentricProjectionModel.from_FoV(matrix, sats, obs_mecd, 120)
 
-    # propogate and generate Sat frame
-    sat_frame = model.generate_sat_frame(ts.now())
+    # # propogate and generate Sat frame
+    # sat_frame = model.generate_sat_frame(ts.now())
 
-    # render image
-    image_frame = sat_frame.render(cat4)
+    # # render image
+    # image_frame = sat_frame.render(cat5)
 
-    print(image_frame.info())
+    # image_frame.to_png()
 
-    image_frame.to_png()
+    try:
+        print("Starting live update to device")
+
+        # timing code
+        t00 = monotonic()
+        n = 0
+
+        t = ts.now()
+
+        while True:
+            # timing code
+            t0 = monotonic()
+
+            # time of propogation
+            # t = ts.now()
+            t += timedelta(seconds=0.2)
+
+            # generate image frame
+            frame = model.generate_sat_frame(t).render(cat5)
+
+            # save
+            frame.to_png(f"128 x 128/{n}.png")
+
+            # timing code
+            t1 = monotonic()
+            n += 1
+            print(
+                f"Last: {t1 - t0:.3f}s, Avg: {(t1 - t00)/n:.3f}s, Rate: {(1/((t1 - t00)/n)):.3f}/s {' '*20}")
+
+            if n == 100:
+                png_to_gif("./images/128 x 128", duration_ms=200)
+                print(frame.info())
+                break
+
+    except KeyboardInterrupt:
+        print("\nStopping live update to device")

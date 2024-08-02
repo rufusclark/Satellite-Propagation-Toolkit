@@ -220,6 +220,9 @@ class Sats:
     def __add__(self, other: Self) -> Self:
         return self.__class__(self._sats + other._sats)
 
+    def sort(self):
+        self._sats.sort(key=lambda sat: sat.name)
+
     def append(self, other: Sat):
         self._sats.append(other)
 

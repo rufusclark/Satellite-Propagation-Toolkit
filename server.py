@@ -5,14 +5,28 @@ from src.deviceinterface import DeviceInterface
 from src.matrix import Matrix, RGB
 from src.projectionmodels import TopocentricProjectionModel, GeocentricProjectionModel
 from src.utility import get_estimated_latlon
-from src.analysis import TagPixelModifier
+from src.analysis import TagPixelModifier, LaunchDateModifier
 from src import ts
 
 
-modifier = [
-    TagPixelModifier("communications", RGB(100, 0, 0)),
-    TagPixelModifier("weather & earth resources", RGB(0, 100, 0)),
-    TagPixelModifier("navigation", RGB(0, 0, 100))
+from datetime import datetime
+
+modifier0 = [
+    TagPixelModifier("communications", RGB(255, 0, 0)),
+    TagPixelModifier("weather & earth resources", RGB(0, 255, 0)),
+    TagPixelModifier("navigation", RGB(0, 0, 255))
+]
+
+modifier1 = [
+    LaunchDateModifier(
+        datetime(1960, 1, 1), datetime(2000, 1, 1), RGB(255, 0, 0)
+    ),
+    LaunchDateModifier(
+        datetime(2000, 1, 1), datetime(2020, 1, 1), RGB(0, 255, 0)
+    ),
+    LaunchDateModifier(
+        datetime(2020, 1, 1), datetime(2040, 1, 1), RGB(0, 0, 255)
+    )
 ]
 
 
@@ -25,13 +39,12 @@ if __name__ == "__main__":
 
     # connect to device and init
     device = DeviceInterface()
-    device.clear()
 
     # define matrix
     matrix = Matrix(*device.display_dimensions())
 
     # define projection model
-    model = TopocentricProjectionModel.from_FoV(matrix, sats, obs, 90)
+    model = TopocentricProjectionModel.from_FoV(matrix, sats, obs, 50)
 
     try:
         print("Starting live update to device")
@@ -48,7 +61,7 @@ if __name__ == "__main__":
             t = ts.now()
 
             # generate image frame
-            frame = model.generate_sat_frame(t).render(modifier)
+            frame = model.generate_sat_frame(t).render(modifier1)
 
             # send to device
             device.upload_frame(frame)

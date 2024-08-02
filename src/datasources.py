@@ -262,4 +262,7 @@ def init_sats() -> Sats:
     # add tags to sats from SATCAT
     sats.add_tags_from_SATCAT(satcat_data)
 
+    # sort sats by name
+    sats.sort()
+
     return sats

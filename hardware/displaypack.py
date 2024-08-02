@@ -25,7 +25,7 @@ while True:
 
     if op == 1:
         # set pixel
-        _, row, col, r, g, b = args
+        _, row, col, r, g, b, *_ = args
         row = int(row)*cell_size
         col = int(col)*cell_size
         graphics.set_pen(graphics.create_pen(int(r), int(g), int(b)))
@@ -41,3 +41,13 @@ while True:
     elif op == 3:
         # request dimensions
         print(width//cell_size, height//cell_size, sep=",")
+    elif op == 4:
+        # set time
+        _, ts, *_ = args
+        # TODO: Implement
+    elif op == 5:
+        # delayed request
+        _, ts, op, *args = args
+        ts = float(ts)
+        op = int(op)
+        # TODO: Implement

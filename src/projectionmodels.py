@@ -53,7 +53,7 @@ class SatFrame:
         Returns:
             str information output
         """
-        return f"Sat Frame (sats: {self.number_of_sats})\n  propogation time: {self.time.utc_strftime('%Y-%m-%d %H:%M:%S')}\n  {self.model._matrix.info()}\n{self.model.info()}\n{''.join([sat.info() for sat in self.sats])}"
+        return f"Sat Frame (sats: {self.number_of_sats})\n  propagation time: {self.time.utc_strftime('%Y-%m-%d %H:%M:%S')}\n  {self.model._matrix.info()}\n{self.model.info()}\n{''.join([sat.info() for sat in self.sats])}"
 
     def render(self, modifiers: Sequence[BasePixelModifier]) -> ImageFrame:
         """render a new ImageFrame object from this object based on the sats in this frame and their tags and other data
