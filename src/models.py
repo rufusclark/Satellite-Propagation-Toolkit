@@ -7,6 +7,7 @@ from datetime import datetime, date
 from skyfield.api import EarthSatellite, load, wgs84
 from skyfield.toposlib import GeographicPosition
 from skyfield.timelib import Time
+from skyfield.framelib import itrs
 
 
 # Time scale for Earth Orbiting Satellites
@@ -91,21 +92,38 @@ class Sat:
         """
         return ts.now() - self._sat.epoch
 
-    def TEME_position_at(self, t: Time):
+    def ICRS_position_at(self, t: Time):
         return self._sat.at(t)
 
-    def cartesian_position_and_veloicty_at(self, t: Time):
+    def ITRS_position_at(self, t: Time):
+        return self.ICRS_position_at(t).frame_xyz_and_velocity(itrs)
+
+    def ICRS_cartesian_position_and_veloicty_at(self, t: Time) -> tuple[float, float, float, float, float, float]:
         """returns the veloicty and position of the satelite progated to the given time, relative to a ICRS reference frame where units are km or km/s respectively
 
         Args:
-            t: time to propogate to. Defaults to ts.now().
+            t: time to propogate to
 
         Returns:
             x, y, z [km], x_v, y_v, z_v [km/s]
         """
-        pos = self.TEME_position_at(t)
+        pos = self.ICRS_position_at(t)
         x, y, z = pos.position.km  # type: ignore
         x_v, y_v, z_v = pos.velocity.km_per_s  # type: ignore
+        return x, y, z, x_v, y_v, z_v
+
+    def ITRS_cartesian_position_and_velocity_at(self, t: Time) -> tuple[float, float, float, float, float, float]:
+        """returns the veloicty and position of the satellite progated to the given time, relative to the ITRS ECEF Geocentric reference frame where units are km or km/s respectively
+
+        Args:
+            t: time to propogate to
+
+        Returns:
+            x, y, z [km], x_v, y_v, z_v [km/s]
+        """
+        d, v = self.ITRS_position_at(t)
+        x, y, z = d.km  # type: ignore
+        x_v, y_v, z_v = v.km_per_s  # type: ignore
         return x, y, z, x_v, y_v, z_v
 
     def projected_lat_lon_alt(self, t: Time = ts.now()) -> Tuple[float, float, float]:
@@ -125,7 +143,7 @@ class Sat:
             longitude [degrees],
             altitude [km]
         """
-        pos = self.TEME_position_at(t)
+        pos = self.ICRS_position_at(t)
         geo_pos = wgs84.geographic_position_of(pos)
         lat = geo_pos.latitude.degrees
         lon = geo_pos.longitude.degrees

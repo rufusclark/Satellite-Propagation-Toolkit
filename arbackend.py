@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     # generate path
     dir = "./data/csv/"
-    file = f"ICRS{unix_timestamp}.csv"
+    file = f"ITRS{unix_timestamp}.csv"
     filepath = dir + file
 
     if not os.path.exists(dir):
@@ -25,7 +25,8 @@ if __name__ == "__main__":
             "name,launch_date,x[km],y[km],z[km],x_v[km/s],y_v[km/s],z_v[km/s]\n")
 
         for sat in sats.sats:
-            x, y, z, x_v, y_v, z_v = sat.cartesian_position_and_veloicty_at(t)
+            x, y, z, x_v, y_v, z_v = sat.ITRS_cartesian_position_and_velocity_at(
+                t)
 
             # remove invalid projection from data
             valid = True
