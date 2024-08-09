@@ -12,3 +12,11 @@ docs/_build/
 # Application Storage
 images/
 data/
+
+# Whitelist Markdown images
+!images/
+images/*
+!images/md/
+
+# Dev files
+dev*

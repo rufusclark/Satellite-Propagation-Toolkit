@@ -1,5 +1,4 @@
 """represents a single RGB pixel"""
-from typing import Tuple
 from typing_extensions import Self
 
 
@@ -17,7 +16,7 @@ class RGB:
     def is_off(self) -> bool:
         return self.R == self.G == self.B == 0
 
-    def to_tuple(self) -> Tuple[int, int, int]:
+    def to_tuple(self) -> tuple[int, int, int]:
         return self.R, self.G, self.B
 
     def __repr__(self) -> str:

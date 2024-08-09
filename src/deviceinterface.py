@@ -1,4 +1,5 @@
 """handles communication with RPi Pico over serial and control of the Pico device"""
+# TODO: Include api spec in the top of this file
 from typing import List, Any, Sequence
 
 from .matrix import RGB, ImageFrame
@@ -18,6 +19,9 @@ class DeviceInterface:
         self._last_frame: ImageFrame = None  # type:ignore
 
         print(f"Connected to device on port: {port}")
+
+        # set the time on the device to the current time
+        self.set_current_time()
 
     def _autoport(self) -> str:
         """returns the str port device of first connected serial device
@@ -45,6 +49,16 @@ class DeviceInterface:
         self.conn.write(
             f"{op},{','.join([str(arg) for arg in args])}\n".encode(self._encoding))
 
+    def _delayed_cmd(self, ts: float, *args) -> None:
+        """send an command to be executed at a specified unix timestamp
+
+        consider setting the time on the device to ensure it is correct. micro-proccessors have a tendency to have poor timekeeper or no timekeeping ability.
+
+        Args:
+            ts: execution unix timestamp
+        """
+        self._send_csv(5, ts, *args)
+
     def set_pixel(self, x: int, y: int, rgb: RGB) -> None:
         """set the devices pixel to colour rgb
 
@@ -55,10 +69,16 @@ class DeviceInterface:
         """
         self._send_csv(1, x, y, *rgb.to_tuple())
 
-    def clear(self) -> None:
+    def delayed_set_pixel(self, ts: float, x: int, y: int, rgb: RGB) -> None:
+        self._delayed_cmd(ts, 1, x, y, *rgb.to_tuple())
+
+    def clear_display(self) -> None:
         """clear the display
         """
         self._send_csv(2)
+
+    def delayed_clear(self, ts: float) -> None:
+        self._delayed_cmd(ts, 2)
 
     def display_dimensions(self) -> tuple[int, int]:
         """get the matrix dimensions from the device
@@ -73,9 +93,18 @@ class DeviceInterface:
             if raw:
                 args = raw.decode(self._encoding).strip(
                     "\r\n").strip().split(",")
-                return int(args[0]), int(args[1])
 
-    def set_time(self, unix_timestamp: int) -> None:
+                row, col, *_ = args
+                return int(row), int(col)
+
+    def _debug_print_serial(self) -> None:
+        while True:
+            raw = self.conn.readline()
+            if raw:
+                raw.decode(self._encoding)
+                print(raw)
+
+    def set_time(self, unix_timestamp: float) -> None:
         """set the time on the device
 
         Args:
@@ -87,7 +116,7 @@ class DeviceInterface:
         """set the time on the device to the current time
         """
         import time
-        self.set_time(int(time.time()))
+        self.set_time(time.time())
 
     def upload_frame(self, frame: ImageFrame) -> None:
         """upload and display the frame on the device
@@ -98,7 +127,7 @@ class DeviceInterface:
         # create a blank frame for comparison if it doesn't exist
         if not self._last_frame:
             self._last_frame = frame._matrix._empty_frame()
-            self.clear()
+            self.clear_display()
 
         # update pixels that require update
         def update_px(x, y):

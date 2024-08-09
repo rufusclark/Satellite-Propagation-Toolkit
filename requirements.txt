@@ -1,0 +1,4 @@
+skyfield
+pyserial
+typing_extensions
+geocoder

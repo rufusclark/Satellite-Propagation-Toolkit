@@ -93,7 +93,7 @@ class ImageFrame:
         return f"<MatrixFrame t={self.time} {self._matrix}>"
 
     def to_png(self, filename: str = "image.png") -> None:
-        # TODO: generage name based on model details and or add to metadata
+        # TODO: Add metadata from info
         import png
 
         pixels = []
@@ -104,26 +104,22 @@ class ImageFrame:
                 row.extend(self.get_pixel(x, y).to_tuple())
             pixels.append(row)
 
-        filepath = self._matrix.path + filename
-        png.from_array(pixels, "RGB").save(filepath)
-        print(f"Saved png: {filepath}")
+        png.from_array(pixels, "RGB").save(filename)
+        print(f"Saved png: {filename}")
 
 
 class Matrix:
-    def __init__(self, width: int = 16, height: int = 16, path: str = "./images/") -> None:
-        """creates a matrix object that it used to manage the size of matrix frame objects and file saving locations.
+    def __init__(self, width: int = 16, height: int = 16) -> None:
+        """creates a matrix object that it used to manage the size of matrix frame objects
 
         This is effectively a proxy for a LED matrix panel or picture
 
         Args:
             width: number of pixels wide. Defaults to 16.
             height: number of pxiels high. Defaults to 16.
-            path: base directory for saved images. Defaults to "./images/".
-            pixel_modifiers: list of pixel modifiers for support for changing pixel values based on sat metadata
         """
         self.width = width
         self.height = height
-        self.path = path
 
     def info(self) -> str:
         return f"matrix size: ({self.width} x {self.height})"

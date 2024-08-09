@@ -34,6 +34,24 @@ class SatFrame:
         self._sats.append(sat)
 
     @property
+    def unix_timestamp(self) -> float:
+        """unix timestamp of frame in seconds including microseconds
+
+        Returns:
+            float seconds since epoch
+        """
+        return self.time.utc_datetime().timestamp()  # type: ignore
+
+    @property
+    def unix_timestamp_seconds(self) -> int:
+        """unix timestamp of frame in seconds - no microseconds
+
+        Returns:
+            integer seconds since epoch
+        """
+        return int(self.unix_timestamp)
+
+    @property
     def cells(self) -> int:
         """number of cells"""
         return len(self.model._matrix)
