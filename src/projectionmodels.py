@@ -8,7 +8,7 @@ from skyfield.timelib import Time
 
 from .models import Sats, SatPosition
 from .matrix import Matrix, ImageFrame
-from .analysis import BasePixelModifier
+from .analysis import BasePixelModifier, Modifiers
 
 EARTH_RADIUS = 6371  # [km] mean radius
 
@@ -73,7 +73,7 @@ class SatFrame:
         """
         return f"Sat Frame (sats: {self.number_of_sats})\n  propagation time: {self.time.utc_strftime('%Y-%m-%d %H:%M:%S')}\n  {self.model._matrix.info()}\n{self.model.info()}\n{''.join([sat.info() for sat in self.sats])}"
 
-    def render(self, modifiers: Sequence[BasePixelModifier]) -> ImageFrame:
+    def render(self, modifiers: Modifiers) -> ImageFrame:
         """render a new ImageFrame object from this object based on the sats in this frame and their tags and other data
 
         Args:
@@ -82,18 +82,14 @@ class SatFrame:
         Returns:
             New ImageFrame object
         """
-        # generate appropriate info
-        modifier_str = "Key\n  " + \
-            "\n  ".join([modifier.info() for modifier in modifiers])
-
         # create new image frame
         frame = ImageFrame(self.model._matrix, self.time,
-                           _sat_frame=self, _modifier_info=modifier_str)
+                           _sat_frame=self, _modifiers=modifiers)
 
         # render frame
         for sat in self.sats:
             rgb = frame.get_pixel(sat.x, sat.y)
-            for modifier in modifiers:
+            for modifier in modifiers.modifiers:
                 rgb = modifier.handle(sat, rgb)
             frame.set_pixel(sat.x, sat.y, rgb)
         return frame

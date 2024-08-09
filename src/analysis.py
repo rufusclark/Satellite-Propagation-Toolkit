@@ -1,8 +1,11 @@
 """contains code for analysing propogation data"""
+from typing import TYPE_CHECKING
+
 from .rgb import RGB
-from .models import Sat, SatPosition
+from .models import SatPosition
 from datetime import datetime
-from typing import Any
+if TYPE_CHECKING:
+    from .projectionmodels import SatFrame
 
 
 class BasePixelModifier:
@@ -62,7 +65,7 @@ class TagPixelModifier(BasePixelModifier):
         return rgb
 
     def info(self) -> str:
-        return f"{self.modifer} if includes one of following tags: {', '.join(self.tags)}"
+        return f"{self.modifer.info()} if sat includes one of following tags: {', '.join(self.tags)}"
 
 
 class NotTagPixelMofidier(TagPixelModifier):
@@ -83,7 +86,7 @@ class NotTagPixelMofidier(TagPixelModifier):
         return rgb
 
     def info(self) -> str:
-        return f"{self.modifer} if doesn't include any of following tags: {', '.join(self.tags)}"
+        return f"{self.modifer.info()} if sat doesn't include any of following tags: {', '.join(self.tags)}"
 
 
 class LaunchDateModifier(BasePixelModifier):
@@ -109,7 +112,7 @@ class LaunchDateModifier(BasePixelModifier):
         return rgb
 
     def info(self) -> str:
-        return f"{self.modifier.info()} if launch date is between {self.min_datetime.date().isoformat()} and {self.max_datetime.date().isoformat()}"
+        return f"{self.modifier.info()} if sat's launch date is between {self.min_datetime.date().isoformat()} and {self.max_datetime.date().isoformat()}"
 
 
 class AltitudeModifier(BasePixelModifier):
@@ -135,7 +138,7 @@ class AltitudeModifier(BasePixelModifier):
         return rgb
 
     def info(self) -> str:
-        return f"{self.modifier.info()} if altitude is between {self.min_alt}km and {self.max_alt}km"
+        return f"{self.modifier.info()} if sat's altitude is between {self.min_alt}km and {self.max_alt}km"
 
 
 class DistanceModifier(BasePixelModifier):
@@ -161,4 +164,21 @@ class DistanceModifier(BasePixelModifier):
         return rgb
 
     def info(self) -> str:
-        return f"{self.modifier.info()} if distance from observer is between {self.min_distance}km and {self.max_distance}km"
+        return f"{self.modifier.info()} if sat's distance from observer is between {self.min_distance}km and {self.max_distance}km"
+
+
+class Modifiers:
+    """Container class for modifiers"""
+
+    def __init__(self, *modifiers: BasePixelModifier) -> None:
+        self.modifiers = modifiers
+
+    def key(self) -> str:
+        """return a string formatted key ready to be printed for the included modifiers"""
+        return "Key\n  " + "\n  ".join([modifier.info() for modifier in self.modifiers])
+
+    def key_with_analysis(self, sat_frame: "SatFrame") -> str:
+        """return a sring formatted key with included breakdown of the data in the SatFrame"""
+        return f"Key (total sats = {sat_frame.number_of_sats})\n  " + "\n  ".join([
+            modifier.info() + f" (sats = {sum([modifier.handle(sat, RGB()) != RGB() for sat in sat_frame.sats])})" for modifier in self.modifiers
+        ])

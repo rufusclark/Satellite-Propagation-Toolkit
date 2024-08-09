@@ -12,9 +12,7 @@ you can set your location manually with:
 >>> observer = wgs84.latlon(lat, lon)
 """
 
-modifiers = [
-    AlwaysPixelModifier(RGB(255, 255, 255))
-]
+modifiers = Modifiers(AlwaysPixelModifier(RGB(255, 255, 255)))
 """
 define modifiers to render image with.
 

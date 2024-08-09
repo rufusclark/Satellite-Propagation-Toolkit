@@ -5,7 +5,7 @@ from .models import ts, Orbits
 from .datasources import NORAD, SATCAT, init_sats
 from .matrix import Matrix, ImageFrame
 from .rgb import RGB
-from .analysis import AlwaysPixelModifier, LaunchDateModifier, TagPixelModifier, NotTagPixelMofidier, AltitudeModifier, DistanceModifier
+from .analysis import AlwaysPixelModifier, LaunchDateModifier, TagPixelModifier, NotTagPixelMofidier, AltitudeModifier, DistanceModifier, Modifiers
 from .device import *
 # from .deviceinterface import DeviceInterface
 from .projectionmodels import TopocentricProjectionModel, GeocentricProjectionModel

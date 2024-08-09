@@ -109,6 +109,49 @@ The accuracy of the propagations and the generated images have been verified aga
 
 This project supports generating standalone images, please see [Generating an image](#generating-an-image) for instructions and examples of generating images.
 
+Once you've craeted your `ImageFrame` object (represents a rendered image) you can call the following methods to receive printable data about the image. The following examples is from within the Python interactive environment `python -i ./examples/quickstart.py`:
+
+```python
+...
+>>> print(image_frame.key())
+Key
+  red (+255)green (+255)blue (+255) always
+>>>
+>>>
+>>> print(image_frame.key_with_analysis())
+Key (total sats = 106)
+  red (+255)green (+255)blue (+255) always (sats = 106)
+>>>
+>>>
+>>> print(image_frame.info())
+Key (total sats = 106)
+  red (+255)green (+255)blue (+255) always (sats = 106)
+Sat Frame (sats: 106)
+  propagation time: 2024-08-09 22:38:58
+  matrix size: (128 x 128)
+Topocentric Projection
+  observer: 52.40°N, 0.73°W
+  cell width: 0.75°N/S, 0.75°E/W
+  minimum FoV: 95.75°
+  equivalent FoV: 120.00°
+
+ARKTIKA-M 2  (launched 2023-12-16, 237 days ago)
+  days since epoch: 6.61
+  tags: weather, weather & earth resources, active, special-interest, payload, operational, tyuratam missile and space center, kazakhstan(also known as baikonur cosmodrome)
+  grid position: (79, 73)
+  altitude: 33260km
+  distance from observer: 33405km
+BEIDOU-2 M1  (launched 2007-04-13, 6328 days ago)
+  days since epoch: 5.24
+  tags: satnogs, communications, payload, nonoperational, xichang launch facility, prc
+  grid position: (5, 82)
+  altitude: 22467km
+  distance from observer: 24034km
+...
+```
+
+For more adavanced analysis this can be used to categorise the number of different satellites in a given projeciton. The key methods are available without rendering an Image using the `Modifiers.key_with_analysis(sat_frame)` method.
+
 ## Outreach recommendations
 
 If the goal of this project is to create an outreach device, the following hardware is recommended: The schematics for a 3D printable case are also available for download.
@@ -400,11 +443,7 @@ Key:
 ![280 deg Geocentric Projection above 0N, 0E by constellation](images/md/0,%200%20GEO%20280deg%20400x400%20constellations.png)
 
 ## Documentation
-<!-- Insert link to Sphinx generated pdf -->
-<!-- Deploy Sphinx to GitHub -->
-<!-- https://coderefinery.github.io/documentation/gh_workflow/ -->
-Please note this project makes extensive use of type hints and docstrings to document and type check the codebase. It is recommended that you use these, within a modern IDE like VSCode with type hinting, if you intend to develop or extend this project.
+
+Please note this project makes extensive use of type hints and docstrings to document and type check the codebase. It is recommended that you use these, within a modern IDE like VSCode with type hinting, as documentation, if you intend to develop or extend this project.
 
 MicroPython stubs are available [here](https://github.com/pimoroni/pimoroni-pico-stubs) but please be wary of changing core embedded code as the MicroPython source code varies from release to release and is inconsistently documented.
-
-TBC - Link to API docs - Insert link to Sphinx PDF or webpage

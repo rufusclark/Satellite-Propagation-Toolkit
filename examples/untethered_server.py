@@ -14,11 +14,11 @@ DST_DIR = "images"
 # Each individual modifier corrosponds to a different button on the device
 modifiers = [
     # Always display as white RGB(255, 255, 255)
-    [
+    Modifiers(
         AlwaysPixelModifier(RGB(255, 255, 255))
-    ],
+    ),
     # Set the colour based on when the satellite was launched
-    [
+    Modifiers(
         LaunchDateModifier(
             datetime.datetime(1960, 1, 1), datetime.datetime(
                 2000, 1, 1), RGB(255, 0, 0)
@@ -31,19 +31,19 @@ modifiers = [
             datetime.datetime(2020, 1, 1), datetime.datetime(
                 2040, 1, 1), RGB(0, 0, 255)
         )
-    ],
+    ),
     # Set the colour based on satellite type and brightness based on number of satellites
-    [
+    Modifiers(
         TagPixelModifier("communications", RGB(100, 0, 0)),
         TagPixelModifier("weather & earth resources", RGB(0, 100, 0)),
         TagPixelModifier("navigation", RGB(0, 0, 100))
-    ],
+    ),
     # Set the colour based on the satellite altitude and brightness based on number of satellites
-    [
+    Modifiers(
         AltitudeModifier(0, 1000, RGB(100, 0, 0)),
         AltitudeModifier(1000, 3000, RGB(0, 100, 0)),
         AltitudeModifier(3000, 100000, RGB(0, 0, 100))
-    ]
+    )
 ]
 
 # Change this to change the FoV of your display
@@ -90,9 +90,9 @@ try:
         sat_frame = model.generate_sat_frame(t)
 
         # generate image frame for each modifier and save
-        for idx, modifer in enumerate(modifiers):
+        for idx, modifier in enumerate(modifiers):
             path = f"{SRC_DIR}/{width}x{height}/{idx}/{sat_frame.unix_timestamp_seconds}.png"
-            frame = sat_frame.render(modifer)
+            frame = sat_frame.render(modifier)
             frame.to_png(path)
 
         # increment propogation time
@@ -111,3 +111,10 @@ device = RemoteInterface().copy_file_structure(
     f"{SRC_DIR}/{width}x{height}", DST_DIR)
 
 print("Upload complete")
+
+# print description of model
+print(model.info())
+
+# print key for each view
+for idx, modifier in enumerate(modifiers):
+    print(f"View {idx} {modifier.key()}")

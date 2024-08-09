@@ -7,7 +7,7 @@ from time import monotonic
 from datetime import datetime
 
 # Change this to change what information is dipslayed for satellites in the project
-modifier = [
+modifier = Modifiers(
     LaunchDateModifier(
         datetime(1960, 1, 1), datetime(2000, 1, 1), RGB(255, 0, 0)
     ),
@@ -17,7 +17,7 @@ modifier = [
     LaunchDateModifier(
         datetime(2020, 1, 1), datetime(2040, 1, 1), RGB(0, 0, 255)
     )
-]
+)
 
 # Change this to change the FoV of your display
 FoV = 50

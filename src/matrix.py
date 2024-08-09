@@ -5,6 +5,7 @@ from skyfield.timelib import Time
 
 from .rgb import RGB
 from .models import ts
+from .analysis import Modifiers
 if TYPE_CHECKING:
     from .projectionmodels import SatFrame
 
@@ -13,22 +14,44 @@ class ImageFrame:
     """MatrixFrame about origin (top left) with conventional cartesian coordinates
     """
 
-    def __init__(self, matrix: "Matrix", time: Time, *, _sat_frame: "SatFrame | None" = None, _modifier_info: str = "") -> None:
+    def __init__(self, matrix: "Matrix", time: Time, *, _sat_frame: "SatFrame | None" = None, _modifiers: Modifiers | None = None) -> None:
         """generate an empty frame from a matrix with a given time.
 
         Args:
             matrix: Matrix
             time: skyfield Time object
         """
-        # ? Consider adding a self._model object
         self._matrix = matrix
         self.time = time
         self._pixels: list[RGB] = [RGB() for _ in range(len(matrix))]
-        self._sat_frame: "SatFrame" = _sat_frame  # type: ignore
-        self._modifier_info = _modifier_info
+
+        # contain data about progation, sats and model
+        self._sat_frame = _sat_frame
+        self._modifiers = _modifiers
+
+    def key(self) -> str:
+        """return image key for ImageFrame
+
+        this requires that this object was rendered from a SatFrame object"""
+        if self._modifiers:
+            return self._modifiers.key()
+        raise UserWarning(
+            "this method is only valid for ImageFrame objects rendered from SatFrames")
+
+    def key_with_analysis(self) -> str:
+        """return image key for ImageFrame with the number of sats per category
+
+        this requires that this object was rendered from a SatFrame object"""
+        if self._modifiers and self._sat_frame:
+            return self._modifiers.key_with_analysis(self._sat_frame)
+        raise UserWarning(
+            "this method is only valid for ImageFrame objects rendered from SatFrames")
 
     def info(self) -> str:
-        return self._modifier_info + "\n" + self._sat_frame.info()
+        """return info about the ImageFrame including model, matrix and sats
+
+        this requires that this object was rendered from a SatFrame object"""
+        return self.key_with_analysis() + "\n" + self._sat_frame.info()  # type: ignore
 
     @property
     def unix_timestamp(self) -> float:
