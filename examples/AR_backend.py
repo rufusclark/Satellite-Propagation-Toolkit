@@ -1,6 +1,8 @@
 """backend for generating csv data for unity
 
 used to generate csv files for unity with ICRS position and velocity relative to IRCS reference frame, where the filename is the unix timestamp of the generation time"""
+import init
+
 from src import *
 import os
 import math

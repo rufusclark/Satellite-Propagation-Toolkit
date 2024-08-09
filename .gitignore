@@ -20,3 +20,6 @@ images/*
 
 # Dev files
 dev*
+
+# Docs
+docs/

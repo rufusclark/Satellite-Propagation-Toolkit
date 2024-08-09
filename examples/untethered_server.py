@@ -1,6 +1,6 @@
 """This script can be used to control the Pico in tethered mode (live)"""
-# TODO: Handle or warn if files already exist, create hash?
-# TODO: Check if files already exist and delete or create new folder per run?
+import init
+
 from src import *
 
 from pathlib import Path

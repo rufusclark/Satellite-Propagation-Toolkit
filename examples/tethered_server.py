@@ -1,4 +1,6 @@
 """This script can be used to control the Pico in tethered mode (live)"""
+import init
+
 from src import *
 
 from time import monotonic

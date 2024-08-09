@@ -31,7 +31,7 @@ The core features of the project are:
 ![500deg Topocentric Projection about 0N, 0E](images/md/0,0%20TOPO%20500deg%20400x400.png)
 <!-- Include images of hardware - massive panel -->
 
-This program has been written with extensibility in mind and supports a wide range of customisation without writing any new logic. See [documentation](#documentation) and [quickstart script](quickstart.py) for more details.
+This program has been written with extensibility in mind and supports a wide range of customisation without writing any new logic. See [documentation](#documentation) and [quickstart script](examples/quickstart.py) for more details.
 
 ## Setup
 
@@ -64,10 +64,10 @@ pip install -r requirements.txt
 
 ### Generating an image
 
-Once you've completed the setup you can then generate your first live image of the satellites above your head with the [quickstart script](quickstart.py). This also contains lots of comments to explain the process of generating an image and how you might customise it. This can be executed as follows and will also output contextual information about the image generated:
+Once you've completed the setup you can then generate your first live image of the satellites above your head with the [quickstart script](examples/quickstart.py). This also contains lots of comments to explain the process of generating an image and how you might customise it. This can be executed as follows and will also output contextual information about the image generated:
 
 ```cmd
-python3 ./quickstart.py
+python3 ./examples/quickstart.py
 ```
 
 > Please note this may take up to a few minutes depending on your internet connection the first time as all the satellite data needs to be downloaded from the internet
@@ -186,12 +186,12 @@ If you encounter an issue, please make sure this is the only USB device connecte
 
 With tethered mode, the output for the display is generated live on the attached device and sent via serial to the Pico.
 
-Please see [example tethered server script](tethered_server.py) for code examples. Changing variables within this script will change the data output on your board.
+Please see [example tethered server script](examples/tethered_server.py) for code examples. Changing variables within this script will change the data output on your board.
 
 This script can be run by entering:
 
 ```cmd
-python3 .\tethered_server.py
+python3 ./examples/tethered_server.py
 ```
 
 If the script freezes and doesn't do anything, please reinsert your device and try again.
@@ -235,12 +235,12 @@ Within untethered mode clicking a button will automatically change the view. The
 
 #### Uploading data
 
-Please see [example untethered server script](untethered_server.py) for code examples. Changing variables within this script will change the data output on your board.
+Please see [example untethered server script](examples/untethered_server.py) for code examples. Changing variables within this script will change the data output on your board.
 
 This script can be run by entering:
 
 ```cmd
-python3 .\untethered_server.py
+python3 ./examples/untethered_server.py
 ```
 
 If the script freezes and doesn't do anything, please reinsert your device and try again.

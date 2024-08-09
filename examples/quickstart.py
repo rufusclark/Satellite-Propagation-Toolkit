@@ -1,5 +1,8 @@
-import datetime
+"""quickstart script for generating an image of the current satellites above your heads"""
+import init
+
 from src import *
+
 
 observer = get_estimated_latlon()
 """
