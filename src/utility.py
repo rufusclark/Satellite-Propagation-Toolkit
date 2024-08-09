@@ -157,6 +157,7 @@ def create_backup_images() -> None:
     # Change this to change the FoV of your display
     FoV = 50
 
+    # Set start time and duration for projection
     start_time = datetime.datetime.now(tz=utc)
     duration = datetime.timedelta(seconds=60)
     end_time = start_time + duration
@@ -178,25 +179,19 @@ def create_backup_images() -> None:
 
     # create file structure to save images
     print("Generating file system for generated images")
-
     for path in [f"{SRC_DIR}/{width}x{height}/{idx}" for idx, _ in enumerate(modifiers)]:
         Path(path).mkdir(parents=True, exist_ok=True)
 
     print("Generating projection images for device")
-
-    # timing code
-    t00 = monotonic()
-    n = 0
 
     # set time
     t_start = ts.from_datetime(start_time)
     t_end = ts.from_datetime(end_time)
     t = t_start
 
-    while t < t_end:
-        # timing code
-        t0 = monotonic()
+    timer = LapTimer()
 
+    while t < t_end:
         # propogate sat positions
         sat_frame = model.generate_sat_frame(t)
 
@@ -209,11 +204,8 @@ def create_backup_images() -> None:
         # increment propogation time
         t += datetime.timedelta(seconds=1)
 
-        # timing code
-        t1 = monotonic()
-        n += 1
-        print(
-            f"Last: {t1 - t0:.3f}s, Avg: {(t1 - t00)/n:.3f}s, Rate: {(1/((t1 - t00)/n)):.3f}/s {' '*20}", end="\r")
+        timer.lap()
+        print(timer.info() + " "*20, end="\r")
 
     print("Generated all frames")
     print("Starting upload to device")
@@ -226,7 +218,9 @@ def create_backup_images() -> None:
 
 
 def reset_device(device: Literal["displaypack", "stellarunicorn", "unicornpack", "displaypack2.8"]) -> None:
-    """regenerated filesystem structure and copy code"""
+    """regenerated filesystem structure and copy code
+
+    does not delete any data or images but will overwrite code files"""
     remote = RemoteInterface()
     remote.put("./src/hardware/core.py", "core.py")
     remote.put(f"./src/hardware/{device}.py", "main.py")
@@ -235,17 +229,23 @@ def reset_device(device: Literal["displaypack", "stellarunicorn", "unicornpack",
 
 
 def factory_reset_device(device: Literal["displaypack", "stellarunicorn", "unicornpack"], generated_backup_images: bool = True) -> None:
-    """delete all files and start from scratch"""
+    """delete all files and start from scratch
+
+    should be called when setting up devices"""
     remote = RemoteInterface()
     remote.delete_dir_and_contents("")
     remote.put("./src/hardware/core.py", "core.py")
     remote.put(f"./src/hardware/{device}.py", "main.py")
+
+    print("Source code uploaded")
+
     remote._create_dir_if_not_exist("images")
     remote._create_dir_if_not_exist("backup_images")
     del remote
 
+    print("Filesystem generated")
+
     if generated_backup_images:
-        print("Filesystem generated")
         input("Please reinsert your device and press enter to continue")
         print("Generating backup image data (this may take up to a few mins)")
 
