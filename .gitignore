@@ -19,7 +19,7 @@ images/*
 !images/md/
 
 # Dev files
-dev*
+dev_*.py
 
 # Docs
 docs/
