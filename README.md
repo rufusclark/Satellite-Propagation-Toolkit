@@ -318,15 +318,13 @@ Some sample analysis has been included to highlight some key space trends and hi
 
 The following topocentric projections have been generated with an effective FoV of 500 degrees (essentially showing everything in the sky) about 0N, 0E. This gives a really interesting perspective as if you were looking out into space from a point on the equator (except you can see through the Earth).
 
-<!-- What does each pixel mean -->
-
 #### By classification
 
-Key:
+Key (total sats = 10706):
 
-* Red = Communications
-* Green = Weather & Earth Resource
-* Blue = Navigation
+* Red = Communications (sats = 8678)
+* Green = Weather & Earth Resource (sats = 534)
+* Blue = Navigation (sats = 193)
 
 Please note this does not include satellites not included in the above 3 categories.
 
@@ -336,11 +334,11 @@ The majority of satellites here are communication satellites. This trend is like
 
 #### By debris
 
-Key:
+Key (total sats = 10706):
 
-* Red = Debris
-* Green = Rocket Body
-* Blue = Other
+* Red = Debris (sats = 0)
+* Green = Rocket Body (sats = 24)
+* Blue = Other (sats = 10672)
 
 This image shows that not very many of the trackable objects are debris and rocket bodies, it is important to note this is largely on account of the dataset not including this data. Especially in the case of smaller debris pieces such as paint flecks (still massive enough to cause damage to spacecrafts at orbit speeds), which due to their smaller radar cross-section, are much harder to track and pose an invisible hazard that can strike at any time, resulting in more debris and a dangerous feedback loop.
 
@@ -348,11 +346,11 @@ This image shows that not very many of the trackable objects are debris and rock
 
 #### By altitude
 
-Key:
+Key (total sats = 10706):
 
-* Red = 0km to 1000km
-* Green = 1000km to 3000km
-* Blue = 3000km+
+* Red = 0km to 1000km (sats = 8759)
+* Green = 1000km to 3000km (sats = 885)
+* Blue = 3000km+ (1052)
 
 Viewing the satellites by altitude shows a few key trends that agree with common orbit types, in which most of the satellites at higher orbits (blue) are around the equator in GEO. But this only makes up a small number of satellites due to the large FoV of satellites at this altitude. The majority of satellites are based below 1000km in LEO, which is a relatively new trend brought about by the growth of small sats and more affordable launch vehicles.
 
@@ -362,11 +360,11 @@ Looking very carefully you can also see constellations in green over the observe
 
 #### By launch age
 
-Key:
+Key (total sats = 10706):
 
-* Red = Launched before 2000
-* Green = Launched between 2000 and 2020
-* Blue = Launched after 2020
+* Red = Launched before 2000 (sats = 409)
+* Green = Launched between 2000 and 2020 (sats = 1601)
+* Blue = Launched after 2020 (sats = 8271)
 
 This image shows that the majority of the satellites were launched in the last 4 years, showing a massive growth in the number of satellites in orbit. Another feature is that most of the satellites in GEO were launched between 2000 and 2020, which may show that this orbit is in popular demand and there is no more space for spacecrafts in GEO-protected orbits.
 
@@ -374,11 +372,11 @@ This image shows that the majority of the satellites were launched in the last 4
 
 #### By mega-constellation
 
-Key:
+Key (total sats = 10706):
 
-* Red = Starlink
-* Green = OneWeb
-* Blue = Other
+* Red = Starlink (sats = 6284)
+* Green = OneWeb (sats = 631)
+* Blue = Other (sats = 3791)
 
 The majority of the satellites currently in orbit are made up of the two largest constellations, Starlink and OneWeb. You can see the 2 constellations have different orbit patterns, as Starlink has most of the satellites with a 53-degree inclination targeting the growth markets in the areas of the developed world.
 
@@ -392,53 +390,51 @@ The following geocentric projections have been generated with an effective FoV o
 
 #### By classification
 
-Key:
+Key (total sats = 5304):
 
-* Red = Communications
-* Green = Weather & Earth Resource
-* Blue = Navigation
+* Red = Communications (sats = 4315)
+* Green = Weather & Earth Resource (sats = 254)
+* Blue = Navigation (sats = 85)
 
 ![280deg Geocentric Projection above 0N, 0E by type](images/md/0,%200%20GEO%20280deg%20400x400%20type.png)
 
 #### By debris
 
-Key:
+Key (total sats = 5304):
 
-* Red = Debris
-* Green = Rocket Body
-* Blue = Other
-
+* Red = Debris (sats = 0)
+* Green = Rocket Body (sats = 14)
+* Blue = Other (sats = 5285)
 
 ![280 deg Geocentric Projection above 0N, 0E by debris](images/md/0,%200%20GEO%20280deg%20400x400%20debris.png)
 
 #### By altitude
 
-Key:
+Key (total sats = 5304):
 
-* Red = 0km to 1000km
-* Green = 1000km to 3000km
-* Blue = 3000km+
+* Red = 0km to 1000km (sats = 4319)
+* Green = 1000km to 3000km (sats = 446)
+* Blue = 3000km+ (sats = 536)
 
 ![280 deg Geocentric Projection above 0N, 0E by altitude](images/md/0,%200%20GEO%20280deg%20400x400%20altitude.png)
 
 #### By launch age
 
-Key:
+Key (total sats = 5304):
 
-* Red = Launched before 2000
-* Green = Launched between 2000 and 2020
-* Blue = Launched after 2020
-
+* Red = Launched before 2000 (sats = 220)
+* Green = Launched between 2000 and 2020 (sats = 797)
+* Blue = Launched after 2020 (sats = 4099)
 
 ![280 deg Geocentric Projection above 0N, 0E by launch age](images/md/0,%200%20GEO%20280deg%20400x400%20launch%20age.png)
 
 #### By mega-constellation
 
-Key:
+Key (total sats = 5304):
 
-* Red = Starlink
-* Green = OneWeb
-* Blue = Other
+* Red = Starlink (sats = 3085)
+* Green = OneWeb (sats = 319)
+* Blue = Other (sats = 1990)
 
 ![280 deg Geocentric Projection above 0N, 0E by constellation](images/md/0,%200%20GEO%20280deg%20400x400%20constellations.png)
 
