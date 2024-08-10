@@ -93,10 +93,12 @@ class Sat:
         return ts.now() - self._sat.epoch
 
     def ICRS_position_at(self, t: Time):
-        return self._sat.at(t)
+        """Calculate propagated position of satellite in a geocentric ICRS reference frame
 
-    def ITRS_position_at(self, t: Time):
-        return self.ICRS_position_at(t).frame_xyz_and_velocity(itrs)
+        the ICRS reference frame has it's centre at the barycentre of the solar system and is primarily used for astronomy. more details are available at https://en.wikipedia.org/wiki/International_Celestial_Reference_System_and_its_realizations
+
+        for position (and/or velocity) in an ECEF (Earth Centered Earth Fixed) refernce frame, please use the `ITRS_cartesian_position_and_velocity_at()` method instead"""
+        return self._sat.at(t)
 
     def ICRS_cartesian_position_and_veloicty_at(self, t: Time) -> tuple[float, float, float, float, float, float]:
         """returns the veloicty and position of the satelite progated to the given time, relative to a ICRS reference frame where units are km or km/s respectively
@@ -121,7 +123,7 @@ class Sat:
         Returns:
             x, y, z [km], x_v, y_v, z_v [km/s]
         """
-        d, v = self.ITRS_position_at(t)
+        d, v = self.ICRS_position_at(t).frame_xyz_and_velocity(itrs)
         x, y, z = d.km  # type: ignore
         x_v, y_v, z_v = v.km_per_s  # type: ignore
         return x, y, z, x_v, y_v, z_v
@@ -152,6 +154,7 @@ class Sat:
         return lat, lon, alt  # type: ignore
 
     def topocentric_position_at(self, observer: GeographicPosition, t=ts.now()):
+        """returns the sat position topocentric position relative to an observer on the Earth's surface (WGS84)"""
         sat_from_topo = self._sat - observer
         return sat_from_topo.at(t)
 
