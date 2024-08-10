@@ -144,6 +144,11 @@ class RemoteInterface:
         return datetime.datetime(int(t[0]), int(t[1]), int(
             t[2]), int(t[4]), int(t[5]), int(t[6]))
 
+    def get_display_dimensions(self) -> tuple[int, int]:
+        width, height = str(self._pyb.eval(
+            'open("display_dimensions").read().strip()'), encoding="utf8").split(",")
+        return int(width), int(height)
+
     def start_main(self) -> None:
         """starts running the local main.py file on the remote device
 

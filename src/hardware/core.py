@@ -167,6 +167,11 @@ class PicoGraphicsDevice:
         self.graphics = PicoGraphics(display)
         self.graphics.set_backlight(1)
 
+        # write dimensions to file for future reference
+        with open("display_dimensions", "w") as f:
+            width, height = self.display_dimensions()
+            f.write(f"{width},{height}\n")
+
         # setup untethered device
         self.untethered_handler = UntetheredMode()
 

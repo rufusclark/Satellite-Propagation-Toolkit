@@ -1,11 +1,10 @@
 """contains useful utilities"""
-from skyfield.api import utc
 from time import monotonic
 from pathlib import Path
 from typing import Literal
 
 from skyfield.toposlib import GeographicPosition
-from skyfield.api import wgs84
+from skyfield.api import utc, wgs84, Time
 from .projectionmodels import BaseProjectionModel
 from src import *
 import datetime
@@ -71,19 +70,6 @@ class LapTimer:
         return f"Last: {self.d0:.3f}s, Avg: {avg:.3f}s, Rate: {1/avg:.3f}/s"
 
 
-def dirname(model: BaseProjectionModel) -> str:
-    """function for consistent directory naming
-
-    Args:
-        matrix: Matrix object
-        model: Model object
-
-    Returns:
-        formatted directory name
-    """
-    return f"./images/{model.name}{model.width}x{model.height}({model.x_width}x{model.y_width}deg per cell)/"
-
-
 def get_estimated_latlon() -> GeographicPosition:
     """return a skyfield GeographicPosition of your estimated location using ip information
 
@@ -113,6 +99,28 @@ def png_to_gif(png_path: str, gif_filename: str = "./images/out.gif", duration_m
     iio.imwrite(gif_filename, frames, duration=duration_ms, loop=0)
 
 
+def model_to_img(model: BaseProjectionModel, t: Time, *modifiers: Modifiers, root_dir: str = "images/") -> None:
+    # TODO: Fix bug, when executed with multiproccesing.Pool Satrec not pickleable
+    """generate an image(/images) from the model, time and modifier(s) provided.
+
+    This is largely a helper function for more easily working with `multiproccessing.Pool` for parallel processing of propagation.
+
+    An image will be generated for every modifier provided and files will be saved as such: `f"{root_dir}+{modifier index}/{unix timestamp}.png"`.
+
+    Args:
+        model: projection model
+        t: propagation time
+        root_dir: root directory. Defaults to "images/".
+    """
+    # propagate sat positions
+    sat_frame = model.generate_sat_frame(t)
+
+    # generate images from each of the frames
+    for idx, modifier in enumerate(modifiers):
+        path = f"{root_dir}+{idx}/{sat_frame.unix_timestamp_seconds}.png"
+        sat_frame.render(modifier).to_png(path)
+
+
 def create_backup_images() -> None:
     """generates backup data for the next 60 seconds and sends to the device
     """
@@ -121,12 +129,12 @@ def create_backup_images() -> None:
     DST_DIR = "backup_images"
 
     modifiers = [
-        # Always display as white RGB(255, 255, 255)
-        [
+        Modifiers(
+            # Always display as white RGB(255, 255, 255)
             AlwaysPixelModifier(RGB(255, 255, 255))
-        ],
+        ),
         # Set the colour based on when the satellite was launched
-        [
+        Modifiers(
             LaunchDateModifier(
                 datetime.datetime(1960, 1, 1), datetime.datetime(
                     2000, 1, 1), RGB(255, 0, 0)
@@ -139,19 +147,19 @@ def create_backup_images() -> None:
                 datetime.datetime(2020, 1, 1), datetime.datetime(
                     2040, 1, 1), RGB(0, 0, 255)
             )
-        ],
+        ),
         # Set the colour based on satellite type
-        [
+        Modifiers(
             TagPixelModifier("communications", RGB(255, 0, 0)),
             TagPixelModifier("weather & earth resources", RGB(0, 255, 0)),
             TagPixelModifier("navigation", RGB(0, 0, 255))
-        ],
+        ),
         # Set the colour based on the satellite altitude
-        [
+        Modifiers(
             AltitudeModifier(0, 1000, RGB(255, 0, 0)),
             AltitudeModifier(1000, 3000, RGB(0, 255, 0)),
             AltitudeModifier(3000, 100000, RGB(0, 0, 255))
-        ]
+        )
     ]
 
     # Change this to change the FoV of your display
@@ -168,8 +176,11 @@ def create_backup_images() -> None:
     # load all sats
     sats = init_sats()
 
+    # connect to remote device
+    remote = RemoteInterface()
+
     # get width and height of display
-    width, height = LiveInterface().get_display_dimensions()
+    width, height = remote.get_display_dimensions()
 
     # define matrix
     matrix = Matrix(width, height)
@@ -179,7 +190,7 @@ def create_backup_images() -> None:
 
     # create file structure to save images
     print("Generating file system for generated images")
-    for path in [f"{SRC_DIR}/{width}x{height}/{idx}" for idx, _ in enumerate(modifiers)]:
+    for path in [f"{SRC_DIR}/{idx}" for idx, _ in enumerate(modifiers)]:
         Path(path).mkdir(parents=True, exist_ok=True)
 
     print("Generating projection images for device")
@@ -197,7 +208,7 @@ def create_backup_images() -> None:
 
         # generate image frame for each modifier and save
         for idx, modifer in enumerate(modifiers):
-            path = f"{SRC_DIR}/{width}x{height}/{idx}/{sat_frame.unix_timestamp_seconds}.png"
+            path = f"{SRC_DIR}/{idx}/{sat_frame.unix_timestamp_seconds}.png"
             frame = sat_frame.render(modifer)
             frame.to_png(path)
 
@@ -211,8 +222,7 @@ def create_backup_images() -> None:
     print("Starting upload to device")
 
     # copy to remote device
-    RemoteInterface().copy_file_structure(
-        f"{SRC_DIR}/{width}x{height}", DST_DIR)
+    remote.fresh_copy(SRC_DIR, DST_DIR)
 
     print("Upload complete")
 
@@ -244,9 +254,9 @@ def factory_reset_device(device: Literal["displaypack", "stellarunicorn", "unico
     del remote
 
     print("Filesystem generated")
+    print("device restarted")
 
     if generated_backup_images:
-        input("Please reinsert your device and press enter to continue")
         print("Generating backup image data (this may take up to a few mins)")
 
         create_backup_images()

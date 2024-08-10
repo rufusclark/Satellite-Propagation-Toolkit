@@ -9,4 +9,4 @@ from .analysis import AlwaysPixelModifier, LaunchDateModifier, TagPixelModifier,
 from .device import *
 # from .deviceinterface import DeviceInterface
 from .projectionmodels import TopocentricProjectionModel, GeocentricProjectionModel
-from .utility import dirname, get_estimated_latlon, LapTimer, create_backup_images, factory_reset_device, reset_device
+from .utility import get_estimated_latlon, LapTimer, create_backup_images, factory_reset_device, reset_device, model_to_img

@@ -61,8 +61,11 @@ obs = get_estimated_latlon()
 # load all sats
 sats = init_sats()
 
-# get width and height of display
-width, height = LiveInterface().get_display_dimensions()
+# connect to remote device
+remote = RemoteInterface()
+
+# get width and height of display from remote device
+width, height = remote.get_display_dimensions()
 
 # define matrix
 matrix = Matrix(width, height)
@@ -72,7 +75,7 @@ model = TopocentricProjectionModel.from_FoV(matrix, sats, obs, FoV)
 
 # create file structure to save images
 print("Generating file system for generated images")
-for path in [f"{SRC_DIR}/{width}x{height}/{idx}" for idx, _ in enumerate(modifiers)]:
+for path in [f"{SRC_DIR}/{idx}" for idx, _ in enumerate(modifiers)]:
     Path(path).mkdir(parents=True, exist_ok=True)
 
 print("Generating projection images for device")
@@ -91,7 +94,7 @@ try:
 
         # generate image frame for each modifier and save
         for idx, modifier in enumerate(modifiers):
-            path = f"{SRC_DIR}/{width}x{height}/{idx}/{sat_frame.unix_timestamp_seconds}.png"
+            path = f"{SRC_DIR}/{idx}/{sat_frame.unix_timestamp_seconds}.png"
             frame = sat_frame.render(modifier)
             frame.to_png(path)
 
@@ -107,8 +110,7 @@ print("Generated all frames")
 print("Starting upload to device")
 
 # copy to remote device
-device = RemoteInterface().copy_file_structure(
-    f"{SRC_DIR}/{width}x{height}", DST_DIR)
+remote.fresh_copy(f"{SRC_DIR}", DST_DIR)
 
 print("Upload complete")
 

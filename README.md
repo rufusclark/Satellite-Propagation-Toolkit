@@ -209,9 +209,7 @@ From this project's root directory, open a terminal and enter python3 interprete
 python3 -i
 ```
 
-Then upload the client code onto the device and generate the backup data using the following commands (enter them line by line), whilst reinserting the device as instructed.
-
-Change INSERT-DEVICE-NAME to the name of your device using? the following options
+Then upload the client code and backup data onto the device using the following commands. Change INSERT-DEVICE-NAME to the name of your device using below:
 
 * `unicornpack`
 * `displaypack`
