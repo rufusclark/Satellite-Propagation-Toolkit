@@ -7,6 +7,10 @@ class LapTimer:
     """
 
     def __init__(self, *, _n_target: int = 0) -> None:
+        """creates a new LapTimer object
+
+        if _n_target is provided, this will represent the total number of laps to complete this task and the `LapTimer.info()` method will provided information about progress and the estimated time until completion
+        """
         self.n = 0
         """lap count"""
         self.t00 = 0

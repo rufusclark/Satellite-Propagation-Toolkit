@@ -3,7 +3,6 @@ import init
 
 from src import *
 
-
 observer = get_estimated_latlon()
 """
 define the observer location from estimated ip location.
@@ -12,9 +11,9 @@ you can set your location manually with:
 >>> observer = wgs84.latlon(lat, lon)
 """
 
-modifiers = Modifiers(AlwaysPixelModifier(RGB(255, 255, 255)))
+modifier = Modifiers(AlwaysPixelModifier(RGB(255, 255, 255)))
 """
-define modifiers to render image with.
+define modifier to render image with.
 
 if the modifier is satisfied the pixel value of the corrosponding sat is added to the supplied RGB value.
 
@@ -30,7 +29,7 @@ this FoV is the effective field of view of your image if your projection was cir
 
 t = ts.now()
 """
-set the propagation time.
+set the propagation time to the current time.
 
 please note propagations more than 2 weeks from the last satellite track are inaccurate due to the instantaneous nature of radar tracking
 
@@ -68,7 +67,7 @@ sat_frame = model.generate_sat_frame(t)
 propogate all the sats and generate a `SatFrame` (2D matrix containing all sats that fall within it's bounds after being projected).
 """
 
-image_frame = sat_frame.render(modifiers)
+image_frame = sat_frame.render(modifier)
 """
 render the sat frame with the modifiers defined above to create an `ImageFrame` (2D matrix with pixel values).
 
