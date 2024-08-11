@@ -441,3 +441,12 @@ Key (total sats = 5304):
 Please note this project makes extensive use of type hints and docstrings to document and type check the codebase. It is recommended that you use these, within a modern IDE like VSCode with type hinting, as documentation, if you intend to develop or extend this project.
 
 MicroPython stubs are available [here](https://github.com/pimoroni/pimoroni-pico-stubs) but please be wary of changing core embedded code as the MicroPython source code varies from release to release and is inconsistently documented.
+
+### Future Improvement
+
+This section briefly mentions some of the future improvements to this project that I was not possible to implement due to time contrainst around my internship. For most of the below the core code is in place to support there implementation without reformatting.
+
+* Generating higher resolution output images (multiple pixels per satellite) and with axis
+* Support displaying potential future satellites (and/or mega-constellations) by importing own or generating your own tracking data
+* Further optimise code by supporting multiproccessing when sequencially generating images for devices or otherwise
+* Support reuse of generated images uploaded to Pico devices. Particularly useful for more quickly uploading custom data to a large number of devices
