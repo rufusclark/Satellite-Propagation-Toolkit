@@ -107,7 +107,7 @@ def factory_reset_device(device: Literal["displaypack", "stellarunicorn", "unico
 
         # Set start time and duration for projection
         start_time = datetime.datetime.now(tz=utc)
-        # duration = datetime.timedelta(minutes=1)
+        duration = datetime.timedelta(minutes=1)
 
         # set observer location
         obs = get_estimated_latlon()
@@ -131,7 +131,7 @@ def factory_reset_device(device: Literal["displaypack", "stellarunicorn", "unico
 
         # define propagation times
         propagation_times = [
-            start_time + datetime.timedelta(seconds=x) for x in range(60)
+            start_time + datetime.timedelta(seconds=x) for x in range(int(duration.total_seconds()))
         ]
 
         # generate propagation data and send to device
@@ -142,11 +142,11 @@ def factory_reset_device(device: Literal["displaypack", "stellarunicorn", "unico
             _backup=True
         )
 
+        del remote
+
         # print view for each view
         for idx, modifier in enumerate(modifiers):
             print(f"View {idx+1} {modifier.key()}")
         print("You can change views on your device by pressing the buttons on your device, see \n\thttps://github.com/rufusclark/Satellite-Propagation-Toolkit?tab=readme-ov-file#hardware-operations\nfor more details")
-
-    del remote
 
     print("Please reinsert your device to complete setup")

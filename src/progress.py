@@ -72,6 +72,17 @@ class LapTimer:
         """remaining time to complete total laps in seconds"""
         return max(self.n_remaining * self.avg, 0)
 
+    def fmt_remaining_time(self) -> str:
+        """string formatted remaining time reading to be displayed"""
+        t = self.remaining_seconds
+        if t > 60:
+            if t > 3600:
+                return f"{int(t//3600)}h {int((t-3600)//60)}m {int(t%60)}s"
+            else:
+                return f"{int(t//60)}m {int(t%60)}s"
+        else:
+            return f"{int(t)}s"
+
     def info(self) -> str:
         """return a str output containing the last, avg and rate for printing
 
@@ -79,6 +90,6 @@ class LapTimer:
             formatted string ready to print
         """
         if self.n_target:
-            return f"Progress: {self.percentage_complete:.0f}%, Remaining Time: {self.remaining_seconds:.0f}s (Last: {self.last:.3f}s, Avg: {self.avg:.3f}s, Rate: {self.rate:.3f}/s)"
+            return f"Progress: {self.percentage_complete:.0f}%, Remaining Time: {self.fmt_remaining_time()} (Last: {self.last:.3f}s, Avg: {self.avg:.3f}s, Rate: {self.rate:.3f}/s)"
         else:
             return f"Last: {self.last:.3f}s, Avg: {self.avg:.3f}s, Rate: {self.rate:.3f}/s"

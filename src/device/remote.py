@@ -223,8 +223,8 @@ class RemoteInterface:
         it is not recommended to change the _ (underscore) parameters for this method as they may have undocumented and unexpected side effects.
 
         Args:
-            model: model to use
-            modifiers: modifiers to use
+            model: specified model to use
+            modifiers: specified modifiers to use
             times: times for propagation
             _backup: whether this data should be classificed as backdata. Defaults to False.
             _delete_old_data: whether old data should be deleted. Defaults to True.
@@ -268,7 +268,7 @@ class RemoteInterface:
             # timing code
             timer.lap()
             if _print:
-                print(f"{timer.info():<80}", end="\r")
+                print(f"{timer.info():<100}", end="\r")
 
         if _print:
             print("\nImages generated")
