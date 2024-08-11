@@ -1,14 +1,8 @@
-"""This script can be used to control the Pico in tethered mode (live)"""
+"""This script can be used to load data onto the Pico so it can run in untethered mode (standalone)"""
 import init
 
 from src import *
-
-from pathlib import Path
-import time
 import datetime
-
-SRC_DIR = f"images/{int(time.time())}/"
-DST_DIR = "images"
 
 # Change this to change what information is dipslayed for satellites in the project
 # Each individual modifier corrosponds to a different button on the device
@@ -53,7 +47,6 @@ FoV = 50
 # Please note that this should be within 2 weeks of the current date to get accurate projections
 dt_start = datetime.datetime(2024, 8, 6, tzinfo=utc)
 duration = datetime.timedelta(seconds=10)
-dt_end = dt_start + duration
 
 # set observer location
 obs = get_estimated_latlon()
@@ -64,59 +57,24 @@ sats = init_sats()
 # connect to remote device
 remote = RemoteInterface()
 
-# get width and height of display from remote device
-width, height = remote.get_display_dimensions()
-
 # define matrix
-matrix = Matrix(width, height)
+matrix = Matrix(*remote.get_display_dimensions())
 
 # define projection model
 model = TopocentricProjectionModel.from_FoV(matrix, sats, obs, FoV)
 
-# create file structure to save images
-print("Generating file system for generated images")
-for path in [f"{SRC_DIR}/{idx}" for idx, _ in enumerate(modifiers)]:
-    Path(path).mkdir(parents=True, exist_ok=True)
+# define propagation times
+propagation_times = [
+    dt_start + datetime.timedelta(seconds=x) for x in range(int(duration.total_seconds()))
+]
 
-print("Generating projection images for device")
-
-timer = LapTimer()
-
-# convert datetime to skyfield time scale
-t_start = ts.from_datetime(dt_start)
-t_end = ts.from_datetime(dt_end)
-t = t_start
-
-try:
-    while t < t_end:
-        # propogate sat positions
-        sat_frame = model.generate_sat_frame(t)
-
-        # generate image frame for each modifier and save
-        for idx, modifier in enumerate(modifiers):
-            path = f"{SRC_DIR}/{idx}/{sat_frame.unix_timestamp_seconds}.png"
-            frame = sat_frame.render(modifier)
-            frame.to_png(path)
-
-        # increment propogation time
-        t += datetime.timedelta(seconds=1)
-
-        timer.lap()
-        print(timer.info() + " "*20, end="\r")
-except KeyboardInterrupt:
-    print("\nProccess stopped")
-
-print("Generated all frames")
-print("Starting upload to device")
-
-# copy to remote device
-remote.fresh_copy(f"{SRC_DIR}", DST_DIR)
-
-print("Upload complete")
+# generate propagation data and send to device
+remote.generate_images_to_device(model, modifiers, propagation_times)
 
 # print description of model
-print(model.info())
+print(model.info(), end="")
 
-# print key for each view
+# print view for each view
 for idx, modifier in enumerate(modifiers):
-    print(f"View {idx} {modifier.key()}")
+    print(f"View {idx+1} {modifier.key()}")
+print("You can change views on your device by pressing the buttons on your device, see \n\thttps://github.com/rufusclark/Satellite-Propagation-Toolkit?tab=readme-ov-file#hardware-operations\nfor more details")

@@ -31,7 +31,7 @@ class Sat:
         else:
             launched = "(launched unknown)"
 
-        return f"{self.name} {launched}\n  days since epoch: {self.days_since_epoch:.2f}\n  tags: {', '.join(self.tags)}"
+        return f"{self.name} {launched}\n\tdays since epoch: {self.days_since_epoch:.2f}\n\ttags: {', '.join(self.tags)}"
 
     def add_tag(self, tag: str) -> None:
         """add an additional tag to the sat if it doesn't already exist
@@ -338,11 +338,11 @@ class SatPosition:
     def info(self) -> str:
         addon = ""
         if self.altitude != -1:
-            addon += f"\n  altitude: {self.altitude:.0f}km"
+            addon += f"\n\taltitude: {self.altitude:.0f}km"
         if self.distance != -1:
-            addon += f"\n  distance from observer: {self.distance:.0f}km"
+            addon += f"\n\tdistance from observer: {self.distance:.0f}km"
 
-        return f"{self.sat.info()}\n  grid position: ({self.x}, {self.y}){addon}\n"
+        return f"{self.sat.info()}\n\tgrid position: ({self.x}, {self.y}){addon}\n"
 
 
 class Orbit:

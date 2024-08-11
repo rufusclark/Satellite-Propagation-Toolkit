@@ -71,7 +71,7 @@ class SatFrame:
         Returns:
             str information output
         """
-        return f"Sat Frame (sats: {self.number_of_sats})\n  propagation time: {self.time.utc_strftime('%Y-%m-%d %H:%M:%S')}\n  {self.model._matrix.info()}\n{self.model.info()}\n{''.join([sat.info() for sat in self.sats])}"
+        return f"Sat Frame (sats: {self.number_of_sats})\n\tpropagation time: {self.time.utc_strftime('%Y-%m-%d %H:%M:%S')}\n\t{self.model._matrix.info()}\n{self.model.info()}\n{''.join([sat.info() for sat in self.sats])}"
 
     def render(self, modifiers: Modifiers) -> ImageFrame:
         """render a new ImageFrame object from this object based on the sats in this frame and their tags and other data
@@ -161,10 +161,10 @@ class GeocentricProjectionModel(BaseProjectionModel):
         lon_str = f"{lon:.2f}°E" if lon > 0 else f"{abs(lon):.2f}°W"
 
         orbit_str = [
-            f'  {orbit.name} - {orbit.alt}km - minimum FoV {self.minimum_FoV(orbit.alt):.0f}° - area equivalent FoV {self.equivalent_FoV(orbit.alt):.0f}°\n' for orbit in orbits.orbits
+            f'\t{orbit.name} - {orbit.alt}km - minimum FoV {self.minimum_FoV(orbit.alt):.0f}° - area equivalent FoV {self.equivalent_FoV(orbit.alt):.0f}°\n' for orbit in orbits.orbits
         ]
 
-        return f"Geocentric Projection\n  observer: {lat_str}, {lon_str}\n  cell width: {self.y_width:.2f}°N/S, {self.x_width:.2f}°E/W\n  field of view depends on altitude as observer and oribit are not co-located\n{''.join(orbit_str)}"
+        return f"Geocentric Projection\n\tobserver: {lat_str}, {lon_str}\n\tcell width: {self.y_width:.2f}°N/S, {self.x_width:.2f}°E/W\n\tfield of view depends on altitude as observer and oribit are not co-located\n{''.join(orbit_str)}"
 
     def generate_sat_frame(self, t: Time) -> SatFrame:
         """checks whether each sat in sats falls within the grid box when propogated to a given time defined about the center of the Earth above the origin location. This checks whether each satellite is within a given latitude and longitude range around the observer.
@@ -293,7 +293,7 @@ class TopocentricProjectionModel(BaseProjectionModel):
         lat_str = f"{lat:.2f}°N" if lat > 0 else f"{abs(lat):.2f}°S"
         lon_str = f"{lon:.2f}°E" if lon > 0 else f"{abs(lon):.2f}°W"
 
-        return f"Topocentric Projection\n  observer: {lat_str}, {lon_str}\n  cell width: {self.y_width:.2f}°N/S, {self.x_width:.2f}°E/W\n  minimum FoV: {self.minimum_FoV():.2f}°\n  equivalent FoV: {self.equivalent_FoV():.2f}°\n"
+        return f"Topocentric Projection\n\tobserver: {lat_str}, {lon_str}\n\tcell width: {self.y_width:.2f}°N/S, {self.x_width:.2f}°E/W\n\tminimum FoV: {self.minimum_FoV():.2f}°\n\tequivalent FoV: {self.equivalent_FoV():.2f}°\n"
 
     @classmethod
     def _cell_width_and_height_from_FoV(cls, matrix: Matrix, FoV: float) -> tuple[float, float]:

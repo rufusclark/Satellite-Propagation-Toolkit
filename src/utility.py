@@ -1,73 +1,10 @@
 """contains useful utilities"""
-from time import monotonic
-from pathlib import Path
 from typing import Literal
 
 from skyfield.toposlib import GeographicPosition
-from skyfield.api import utc, wgs84, Time
-from .projectionmodels import BaseProjectionModel
+from skyfield.api import utc, wgs84
 from src import *
 import datetime
-
-
-class LapTimer:
-    """LapTimer supports timing and counting loops
-    """
-
-    def __init__(self) -> None:
-        self.n = 0
-        """lap count"""
-        self.t00 = 0
-        """start time"""
-        self.t0 = 0
-        """lap start time"""
-        self.d0 = 0
-        """lap time"""
-        self.reset()
-
-    def reset(self) -> None:
-        """reset and start the timer
-
-        this call is redundent if `__init__` has just been called
-        """
-        self.n = 0
-        t = monotonic()
-        self.t00 = t
-        self.t0 = t
-
-    def lap(self) -> None:
-        """lap the timer
-
-        this increments the timer and saves the time of the last lap
-        """
-        self.n += 1
-        t = monotonic()
-        self.d0 = t - self.t0
-        self.t0 = t
-
-    @property
-    def last(self) -> float:
-        """last lap time"""
-        return self.d0
-
-    @property
-    def avg(self) -> float:
-        """average lap time since start"""
-        return (self.t0 - self.t00)/self.n
-
-    @property
-    def rate(self) -> float:
-        """average rate since start"""
-        return 1/self.avg
-
-    def info(self) -> str:
-        """return a str output containing the last, avg and rate for printing
-
-        Returns:
-            formatted string ready to print
-        """
-        avg = (self.t0 - self.t00)/self.n
-        return f"Last: {self.d0:.3f}s, Avg: {avg:.3f}s, Rate: {1/avg:.3f}/s"
 
 
 def get_estimated_latlon() -> GeographicPosition:
@@ -99,134 +36,6 @@ def png_to_gif(png_path: str, gif_filename: str = "./images/out.gif", duration_m
     iio.imwrite(gif_filename, frames, duration=duration_ms, loop=0)
 
 
-def model_to_img(model: BaseProjectionModel, t: Time, *modifiers: Modifiers, root_dir: str = "images/") -> None:
-    # TODO: Fix bug, when executed with multiproccesing.Pool Satrec not pickleable
-    """generate an image(/images) from the model, time and modifier(s) provided.
-
-    This is largely a helper function for more easily working with `multiproccessing.Pool` for parallel processing of propagation.
-
-    An image will be generated for every modifier provided and files will be saved as such: `f"{root_dir}+{modifier index}/{unix timestamp}.png"`.
-
-    Args:
-        model: projection model
-        t: propagation time
-        root_dir: root directory. Defaults to "images/".
-    """
-    # propagate sat positions
-    sat_frame = model.generate_sat_frame(t)
-
-    # generate images from each of the frames
-    for idx, modifier in enumerate(modifiers):
-        path = f"{root_dir}+{idx}/{sat_frame.unix_timestamp_seconds}.png"
-        sat_frame.render(modifier).to_png(path)
-
-
-def create_backup_images() -> None:
-    """generates backup data for the next 60 seconds and sends to the device
-    """
-    import time
-    SRC_DIR = f"images/backup{int(time.time())}"
-    DST_DIR = "backup_images"
-
-    modifiers = [
-        Modifiers(
-            # Always display as white RGB(255, 255, 255)
-            AlwaysPixelModifier(RGB(255, 255, 255))
-        ),
-        # Set the colour based on when the satellite was launched
-        Modifiers(
-            LaunchDateModifier(
-                datetime.datetime(1960, 1, 1), datetime.datetime(
-                    2000, 1, 1), RGB(255, 0, 0)
-            ),
-            LaunchDateModifier(
-                datetime.datetime(2000, 1, 1), datetime.datetime(
-                    2020, 1, 1), RGB(0, 255, 0)
-            ),
-            LaunchDateModifier(
-                datetime.datetime(2020, 1, 1), datetime.datetime(
-                    2040, 1, 1), RGB(0, 0, 255)
-            )
-        ),
-        # Set the colour based on satellite type
-        Modifiers(
-            TagPixelModifier("communications", RGB(255, 0, 0)),
-            TagPixelModifier("weather & earth resources", RGB(0, 255, 0)),
-            TagPixelModifier("navigation", RGB(0, 0, 255))
-        ),
-        # Set the colour based on the satellite altitude
-        Modifiers(
-            AltitudeModifier(0, 1000, RGB(255, 0, 0)),
-            AltitudeModifier(1000, 3000, RGB(0, 255, 0)),
-            AltitudeModifier(3000, 100000, RGB(0, 0, 255))
-        )
-    ]
-
-    # Change this to change the FoV of your display
-    FoV = 50
-
-    # Set start time and duration for projection
-    start_time = datetime.datetime.now(tz=utc)
-    duration = datetime.timedelta(seconds=60)
-    end_time = start_time + duration
-
-    # set observer location
-    obs = get_estimated_latlon()
-
-    # load all sats
-    sats = init_sats()
-
-    # connect to remote device
-    remote = RemoteInterface()
-
-    # get width and height of display
-    width, height = remote.get_display_dimensions()
-
-    # define matrix
-    matrix = Matrix(width, height)
-
-    # define projection model
-    model = TopocentricProjectionModel.from_FoV(matrix, sats, obs, FoV)
-
-    # create file structure to save images
-    print("Generating file system for generated images")
-    for path in [f"{SRC_DIR}/{idx}" for idx, _ in enumerate(modifiers)]:
-        Path(path).mkdir(parents=True, exist_ok=True)
-
-    print("Generating projection images for device")
-
-    # set time
-    t_start = ts.from_datetime(start_time)
-    t_end = ts.from_datetime(end_time)
-    t = t_start
-
-    timer = LapTimer()
-
-    while t < t_end:
-        # propogate sat positions
-        sat_frame = model.generate_sat_frame(t)
-
-        # generate image frame for each modifier and save
-        for idx, modifer in enumerate(modifiers):
-            path = f"{SRC_DIR}/{idx}/{sat_frame.unix_timestamp_seconds}.png"
-            frame = sat_frame.render(modifer)
-            frame.to_png(path)
-
-        # increment propogation time
-        t += datetime.timedelta(seconds=1)
-
-        timer.lap()
-        print(timer.info() + " "*20, end="\r")
-
-    print("Generated all frames")
-    print("Starting upload to device")
-
-    # copy to remote device
-    remote.fresh_copy(SRC_DIR, DST_DIR)
-
-    print("Upload complete")
-
-
 def reset_device(device: Literal["displaypack", "stellarunicorn", "unicornpack", "displaypack2.8"]) -> None:
     """regenerated filesystem structure and copy code
 
@@ -238,7 +47,7 @@ def reset_device(device: Literal["displaypack", "stellarunicorn", "unicornpack",
     remote._create_dir_if_not_exist("backup_images")
 
 
-def factory_reset_device(device: Literal["displaypack", "stellarunicorn", "unicornpack"], generated_backup_images: bool = True) -> None:
+def factory_reset_device(device: Literal["displaypack", "stellarunicorn", "unicornpack"], _generate_backup_images: bool = True) -> None:
     """delete all files and start from scratch
 
     should be called when setting up devices"""
@@ -251,14 +60,93 @@ def factory_reset_device(device: Literal["displaypack", "stellarunicorn", "unico
 
     remote._create_dir_if_not_exist("images")
     remote._create_dir_if_not_exist("backup_images")
+    print("Filesystem generated")
     del remote
 
-    print("Filesystem generated")
-    print("device restarted")
+    print("Device restarted")
 
-    if generated_backup_images:
+    if _generate_backup_images:
         print("Generating backup image data (this may take up to a few mins)")
 
-        create_backup_images()
+        modifiers = [
+            Modifiers(
+                # Always display as white RGB(255, 255, 255)
+                AlwaysPixelModifier(RGB(255, 255, 255))
+            ),
+            # Set the colour based on when the satellite was launched
+            Modifiers(
+                LaunchDateModifier(
+                    datetime.datetime(1960, 1, 1), datetime.datetime(
+                        2000, 1, 1), RGB(255, 0, 0)
+                ),
+                LaunchDateModifier(
+                    datetime.datetime(2000, 1, 1), datetime.datetime(
+                        2020, 1, 1), RGB(0, 255, 0)
+                ),
+                LaunchDateModifier(
+                    datetime.datetime(2020, 1, 1), datetime.datetime(
+                        2040, 1, 1), RGB(0, 0, 255)
+                )
+            ),
+            # Set the colour based on satellite type
+            Modifiers(
+                TagPixelModifier("communications", RGB(255, 0, 0)),
+                TagPixelModifier("weather & earth resources", RGB(0, 255, 0)),
+                TagPixelModifier("navigation", RGB(0, 0, 255))
+            ),
+            # Set the colour based on the satellite altitude
+            Modifiers(
+                AltitudeModifier(0, 1000, RGB(255, 0, 0)),
+                AltitudeModifier(1000, 3000, RGB(0, 255, 0)),
+                AltitudeModifier(3000, 100000, RGB(0, 0, 255))
+            )
+        ]
 
-        print("\nPlease reinsert your device to complete setup")
+        # Change this to change the FoV of your display
+        FoV = 50
+
+        # Set start time and duration for projection
+        start_time = datetime.datetime.now(tz=utc)
+        # duration = datetime.timedelta(minutes=1)
+
+        # set observer location
+        obs = get_estimated_latlon()
+
+        print("Loading tracking data")
+
+        # load all sats
+        sats = init_sats()
+
+        # connect to remote device
+        remote = RemoteInterface()
+
+        # get width and height of display
+        width, height = remote.get_display_dimensions()
+
+        # define matrix
+        matrix = Matrix(width, height)
+
+        # define projection model
+        model = TopocentricProjectionModel.from_FoV(matrix, sats, obs, FoV)
+
+        # define propagation times
+        propagation_times = [
+            start_time + datetime.timedelta(seconds=x) for x in range(60)
+        ]
+
+        # generate propagation data and send to device
+        remote.generate_images_to_device(
+            model,
+            modifiers,
+            propagation_times,
+            _backup=True
+        )
+
+        # print view for each view
+        for idx, modifier in enumerate(modifiers):
+            print(f"View {idx+1} {modifier.key()}")
+        print("You can change views on your device by pressing the buttons on your device, see \n\thttps://github.com/rufusclark/Satellite-Propagation-Toolkit?tab=readme-ov-file#hardware-operations\nfor more details")
+
+    del remote
+
+    print("Please reinsert your device to complete setup")

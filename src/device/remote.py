@@ -1,10 +1,11 @@
 """Handles remote control of the Pico to write files to the filesystem and set time"""
 # ! WARNING ! For some rather frustrating reason pyboard is not distributed well anywhere and is instead downloaded as a script from GitHub go figure. https://docs.micropython.org/en/latest/reference/pyboard.py.html# https://github.com/micropython/micropython/blob/master/tools/pyboard.py pyserial is the only dependency of this code
-# TODO: Warning if the device hangs reinsert it
-# BUG: Can hang if already been executed and called again
-
 from .pyboard import Pyboard
 from .tools import autoport
+from ..progress import LapTimer
+from ..projectionmodels import BaseProjectionModel
+from ..analysis import Modifiers
+from ..models import ts
 import datetime
 
 
@@ -27,7 +28,7 @@ class RemoteInterface:
         # must include this to enter raw repl mode and start communication
         self._pyb.enter_raw_repl()
 
-        print(f"Connect to device on port {port}")
+        print(f"Connected to device on port {port}")
 
     def __del__(self) -> None:
         # start main.py script
@@ -59,28 +60,56 @@ class RemoteInterface:
         """
         self._pyb.fs_put(src, dst)
 
-    def copy_file_structure(self, src: str, dst: str) -> None:
+    def copy_file_structure(self, src: str, dst: str, *, _progress: bool = True, _print: bool = True) -> None:
         """copy the file structure from the PC to the remote fs
 
         Args:
             src: filepath of the folder to be copied, not including the root folder name
             dst: root filepath for desination. Defaults to "".
+            _progress: whether to print progress stats. Defaults to True.
+            _print: whether to print when a file or dir is copied. Defaults to True.
         """
+        # create host directory
         from pathlib import Path
         rootdir = Path(src)
         self._create_dir_if_not_exist(dst)
+
+        if _progress:
+            _print = False
+
+            # calculate number of items
+            count = 0
+            for f in rootdir.rglob("*"):
+                count += 1
+
+            timer = LapTimer(_n_target=count)
+
         for f in rootdir.rglob("*"):
+            # traverse through file tree
             src_path = f.as_posix()
-            dst_path = dst + "/" + src_path.removeprefix(src)
+            dst_path = dst + src_path.removeprefix(src)
+
             if f.is_dir():
                 # create file if not exists
                 self._create_dir_if_not_exist(dst_path)
-                print(f"Create remote dir, {dst_path}")
+
+                if _print:
+                    print(f"Create remote dir, {dst_path}")
+
             elif f.is_file():
                 # copy file
                 self.put(src_path, dst_path)
-                print(
-                    f"Copied host file ({src_path}) to remote ({dst_path})")
+
+                if _print:
+                    print(
+                        f"Copied host file ({src_path}) to remote ({dst_path})")
+
+            if _progress:
+                timer.lap()
+                print(f"{timer.info() + ' ' + dst_path:<100}", end="\r")
+
+        if _progress:
+            print()
 
     def tree(self, src: str = "/", *, _depth: int = 0) -> None:
         """print a linux like tree output of the remote filesystem
@@ -168,3 +197,102 @@ class RemoteInterface:
         """
         self.delete_dir_and_contents(dst + "/")
         self.copy_file_structure(src, dst)
+
+    def generate_images_to_device(
+            self,
+            model: BaseProjectionModel,
+            modifiers: list[Modifiers],
+            times: list[datetime.datetime],
+            *,
+            _backup: bool = False,
+            _delete_old_data: bool = True,
+            _cache_generated_images: bool = False,
+            _print: bool = True
+    ):
+        """generates and send propagation data to a remote device
+
+        please note that all times will be rounded to the nearest second as the client code does not support sub second precision.
+
+        please note datetimes much be created with the utc timezone as below:
+        >>> from skyfield.api import utc
+        >>> from datetime import datetime
+        >>> dt = datetime.now(tz=utc)
+        or
+        >>> dt = datetime(2024, 09, 28, tzinfo=utc)
+
+        it is not recommended to change the _ (underscore) parameters for this method as they may have undocumented and unexpected side effects.
+
+        Args:
+            model: model to use
+            modifiers: modifiers to use
+            times: times for propagation
+            _backup: whether this data should be classificed as backdata. Defaults to False.
+            _delete_old_data: whether old data should be deleted. Defaults to True.
+            _cache_generated_images: . Defaults to False.
+            _print: whether progress information should be printed. Defaults to True.
+
+        Raises:
+            ValueError: if provided a times list of 0 items
+        """
+        import time
+
+        # set output directories
+        SRC_DIR = f"images/temp/{int(time.time())}"
+        DST_DIR = "backup_images" if _backup else "images"
+
+        # check times have been supplied
+        n = len(times)
+        if not n:
+            raise ValueError(
+                "Atleast 1 time must be provided to this function")
+
+        if _print:
+            print(
+                f"Generating {n*len(modifiers)} images ({len(modifiers)} views for {n} different propagation times)")
+
+        # setup generation timer
+        timer = LapTimer(_n_target=n)
+
+        for dt in times:
+            # convert datetime to Skyfield Time
+            t = ts.from_datetime(dt)
+
+            # propagate satellites
+            sat_frame = model.generate_sat_frame(t)
+
+            # generate and save image for each modifier
+            for idx, modifier in enumerate(modifiers):
+                path = f"{SRC_DIR}/{idx}/{sat_frame.unix_timestamp_seconds}.png"
+                sat_frame.render(modifier).to_png(path, _print=False)
+
+            # timing code
+            timer.lap()
+            if _print:
+                print(f"{timer.info():<80}", end="\r")
+
+        if _print:
+            print("\nImages generated")
+
+        if _delete_old_data:
+            if _print:
+                print("Removing old data from device")
+            # remove old data from device
+            self.delete_dir_and_contents(DST_DIR + "/")
+
+        if _print:
+            print("Uploading images to device")
+
+        # copy generated images to device
+        self.copy_file_structure(SRC_DIR, DST_DIR)
+
+        if _print:
+            print("Upload complete")
+
+        if not _cache_generated_images:
+            from shutil import rmtree
+
+            # delete generated images
+            rmtree(SRC_DIR)
+
+            if _print:
+                print("Removed cached images")

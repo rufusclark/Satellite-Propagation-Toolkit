@@ -3,7 +3,6 @@ import init
 
 from src import *
 
-from time import monotonic
 from datetime import datetime
 
 # Change this to change what information is dipslayed for satellites in the project
@@ -53,7 +52,7 @@ try:
         device.update_display(frame)
 
         timer.lap()
-        print(timer.info() + ''*20, end="/r")
+        print(f"{timer.info():<80}", end="\r")
 
 except KeyboardInterrupt:
     print("\nStopping live update to device")

@@ -39,7 +39,7 @@ class AlwaysPixelModifier(BasePixelModifier):
         return rgb + self.modifier
 
     def info(self) -> str:
-        return f"{self.modifier.info()} always"
+        return f"{self.modifier.info()} for all sats"
 
 
 class TagPixelModifier(BasePixelModifier):
@@ -112,7 +112,7 @@ class LaunchDateModifier(BasePixelModifier):
         return rgb
 
     def info(self) -> str:
-        return f"{self.modifier.info()} if sat's launch date is between {self.min_datetime.date().isoformat()} and {self.max_datetime.date().isoformat()}"
+        return f"{self.modifier.info()} if a sats launch date is between {self.min_datetime.date().isoformat()} and {self.max_datetime.date().isoformat()}"
 
 
 class AltitudeModifier(BasePixelModifier):
@@ -138,7 +138,7 @@ class AltitudeModifier(BasePixelModifier):
         return rgb
 
     def info(self) -> str:
-        return f"{self.modifier.info()} if sat's altitude is between {self.min_alt}km and {self.max_alt}km"
+        return f"{self.modifier.info()} if a sats altitude is between {self.min_alt}km and {self.max_alt}km"
 
 
 class DistanceModifier(BasePixelModifier):
@@ -164,7 +164,7 @@ class DistanceModifier(BasePixelModifier):
         return rgb
 
     def info(self) -> str:
-        return f"{self.modifier.info()} if sat's distance from observer is between {self.min_distance}km and {self.max_distance}km"
+        return f"{self.modifier.info()} if a sats distance from observer is between {self.min_distance}km and {self.max_distance}km"
 
 
 class Modifiers:
@@ -175,10 +175,10 @@ class Modifiers:
 
     def key(self) -> str:
         """return a string formatted key ready to be printed for the included modifiers"""
-        return "Key\n  " + "\n  ".join([modifier.info() for modifier in self.modifiers])
+        return "Key\n\t" + "\n\t".join([modifier.info() for modifier in self.modifiers])
 
     def key_with_analysis(self, sat_frame: "SatFrame") -> str:
         """return a sring formatted key with included breakdown of the data in the SatFrame"""
-        return f"Key (total sats = {sat_frame.number_of_sats})\n  " + "\n  ".join([
+        return f"Key (total sats = {sat_frame.number_of_sats})\n\t" + "\n\t".join([
             modifier.info() + f" (sats = {sum([modifier.handle(sat, RGB()) != RGB() for sat in sat_frame.sats])})" for modifier in self.modifiers
         ])

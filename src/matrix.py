@@ -115,8 +115,20 @@ class ImageFrame:
     def __repr__(self) -> str:
         return f"<MatrixFrame t={self.time} {self._matrix}>"
 
-    def to_png(self, filename: str = "image.png") -> None:
-        # TODO: Add metadata from info
+    def to_png(self, filename: str = "image.png", *, _print: bool = True, _create_path: bool = True) -> None:
+        """saves the ImageFrame object as a png file
+
+        by default this will create any neccesary folders aswell and will print out a confirmation message once saved
+
+        Args:
+            filename: image filename including path. Defaults to "image.png".
+            _print: whether to print a confirmation message. Defaults to True.
+            _create_path: whether to create the path if it doesn't exist. Defaults to True.
+        """
+        if _create_path:
+            from pathlib import Path
+            Path(filename).parent.mkdir(parents=True, exist_ok=True)
+
         import png
 
         pixels = []
@@ -128,7 +140,8 @@ class ImageFrame:
             pixels.append(row)
 
         png.from_array(pixels, "RGB").save(filename)
-        print(f"Saved png: {filename}")
+        if _print:
+            print(f"Saved image: {filename}")
 
 
 class Matrix:
