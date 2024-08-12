@@ -16,6 +16,7 @@ The project is suitable for everyone from novices with little to no programming 
 * [Outreach recommendations](#outreach-recommendations)
 * [Hardware operations](#hardware-operations)
 * [Sample analysis](#sample-analysis)
+* [Augmented and Virtual Reality](#augmented-and-virtual-reality)
 * [Documentation](#documentation)
 
 ## Features
@@ -435,6 +436,10 @@ Key (total sats = 5304):
 * Blue = Other (sats = 1990)
 
 ![280 deg Geocentric Projection above 0N, 0E by constellation](images/md/0,%200%20GEO%20280deg%20400x400%20constellations.png)
+
+## Augmented and Virtual Reality
+
+A related project to develop an AR/VR app using Unity to visualise satellites is currently under development. See [Unity README](unity/README.md) for further details.
 
 ## Documentation
 

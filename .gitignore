@@ -23,3 +23,6 @@ dev_*.py
 
 # Docs
 docs/
+
+# C# dev
+*.sln

@@ -1,11 +1,18 @@
 """backend for generating csv data for unity
 
-used to generate csv files for unity with ICRS position and velocity relative to IRCS reference frame, where the filename is the unix timestamp of the generation time"""
-import init
+used to generate csv files for unity with ICRS position and velocity relative to IRCS reference frame, where the filename is the unix timestamp of the generation time
+
+please note this method is intended to be called from the project root directory to make root of the same cached files as the rest of the core project
+"""
+# fmt: off
+import os
+import sys
+sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('..'))
 
 from src import *
-import os
 import math
+# fmt: on
 
 if __name__ == "__main__":
     # load all sats
@@ -50,3 +57,5 @@ if __name__ == "__main__":
             # write a sat to file
             f.write(
                 f"{sat.name},{launch_date},{x},{y},{z},{x_v},{y_v},{z_v}\n")
+
+    print(f"Generated output file: {filepath}")
