@@ -6,7 +6,7 @@ using SGPdotNET.Util;
 /*
 This script download and caches live satellite tracking data form CelesTrak.com. This data is then cleaned to remove UNKNOWN and duplicate tracking objects. 
 
-The cache automatically invalidates data after 12 hours.
+The cache automatically invalidates data after 7 days.
 
 The tracking data is then used to propagate the objects to the current time. This script then prints position and velocity vectors in km and km/s respectively.
 
