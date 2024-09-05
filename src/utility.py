@@ -36,7 +36,12 @@ def png_to_gif(png_path: str, gif_filename: str = "./images/out.gif", duration_m
     iio.imwrite(gif_filename, frames, duration=duration_ms, loop=0)
 
 
-def reset_device(device: Literal["displaypack", "stellarunicorn", "unicornpack", "displaypack2.8"]) -> None:
+SUPPORTED_DEVICES = Literal[
+    "displaypack", "stellarunicorn", "unicornpack", "displaypack2.8"
+]
+
+
+def reset_device(device: SUPPORTED_DEVICES) -> None:
     """regenerated filesystem structure and copy code
 
     does not delete any data or images but will overwrite code files"""
@@ -47,7 +52,7 @@ def reset_device(device: Literal["displaypack", "stellarunicorn", "unicornpack",
     remote._create_dir_if_not_exist("backup_images")
 
 
-def factory_reset_device(device: Literal["displaypack", "stellarunicorn", "unicornpack"], _generate_backup_images: bool = True) -> None:
+def factory_reset_device(device: SUPPORTED_DEVICES, _generate_backup_images: bool = True) -> None:
     """delete all files and start from scratch
 
     should be called when setting up devices"""

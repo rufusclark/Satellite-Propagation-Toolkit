@@ -157,16 +157,50 @@ For more adavanced analysis this can be used to categorise the number of differe
 
 If the goal of this project is to create an outreach device, the following hardware is recommended: The schematics for a 3D printable case are also available for download.
 
-TBC
-<!-- TODO: Insert image -->
+This device will required the following skills and relevent basic equipment to make:
+
+* Soldering (to solder the headers to the Pico board)
+* FDM 3D Printing (to make the case)
+
+![Outreach Case Parts](/images/md/outreach%20case%201.jpg)
+![Outreach Case Assembly](/images/md/outreach%20case%202.jpg)
+![Outreach Case Assembled](/images/md/outreach%20case%203.jpg)
 
 ### Recommended outreach hardware
-<!-- TODO: List of parts, with URL and price as of ... -->
-TBC
+
+| Item | Estimated Cost |
+| --- | --- |
+| [Lipo Pico 16MB](https://shop.pimoroni.com/products/pimoroni-pico-lipo?variant=39335427080275) | £13.50 |
+| [Pico Stacking Header Pack](https://shop.pimoroni.com/products/pico-stacking-headers?variant=3927265768251) | £1.50 |
+| [Pimoroni 2.8" Display Pack](https://shop.pimoroni.com/products/pico-display-pack-2-8?variant=42047194005587) | £18.90 |
+| [2000mAh Battery](https://shop.pimoroni.com/products/lipo-battery-pack?variant=20429082247) | £13.50 |
+| Filament 80g | £1.68 |
+| Total Cost | £49.08 |
 
 ### 3D printable case
-<!-- TODO: files, instructions, cost, size, FDM technology -->
-TBC
+
+A simple case that fits together around the recommended hardware can be printed in PLA, PETG or TPU with a standard desktop FDM 3D printer. This will keep your device safe from drops and mishandling.
+
+Once manufactured the case snaps together with a little force, and can be seperated by pulling the top section to the side with a little force.
+
+I recommend the following print settings:
+
+* Infill Percentage: 15%
+* Suppport: None
+* Resolution: 0.2mm
+
+File download:
+
+<!-- Slighly alter CAD to ensure better fit and not breaky things :) -->
+<!-- Expand around openings, dipslay pack 2.8, adapter leads, port -->
+<!-- Reduce overhand and increase ammount of material for bendy bit, increase bendy arm -->
+
+* [Outreach Case Top](./3d%20files/Outreach%20Case%20Top.STL)
+* [Outreach Case Bottom](./3d%20files/Outreach%20Case%20Bottom.STL)
+
+### Usage
+
+This outreach device has the same behaviour as defined below in [Hardware operations](#hardware-operations) except this specific Pico board has a power button on to turn it on and off located next to the BOOT button on the Pico board.
 
 ## Hardware operations
 
@@ -181,9 +215,6 @@ The following devices are currently supported and have been tested:
 * [Pimoroni Pico Unicorn Pack](https://shop.pimoroni.com/products/pico-unicorn-pack?variant=32369501306963)
 * [Pimoroni Pico Display Pack](https://shop.pimoroni.com/products/pico-display-pack?variant=32368664215635)
 * [Pimoroni Stellar Unicorn](https://shop.pimoroni.com/products/space-unicorns?variant=40842632953939)
-
-The following devices have not been tested, but code is available. Use at your own risk:
-
 * [Pimoroni Pico Display Pack 2.8"](https://shop.pimoroni.com/products/pico-display-pack-2-8?variant=42047194005587)
 
 When using this framework with a supported MicroPython-based device, 2 operation modes are available to drive the display on the hardware device as outlined below.
@@ -198,7 +229,7 @@ If you are using one of the supported devices, you can follow these steps to set
 
 Download the respective firmware for your device from [Pimoroni Firmware](https://github.com/pimoroni/pimoroni-pico/releases) under the assets section.
 
-Insert your device into your computer using a USB cable whilst pressing the BOOTSET button on the back of the Pico board.
+Insert your device into your computer using a USB cable whilst pressing the BOOTSET button on the back of the Pico board (Please note this button may be in a different place on custom boards, but should have the label BOOT or BOOTSET, if in doubt see youre board's documentation).
 
 Copy the downloaded file onto the Pico storage value on your computer.
 
@@ -223,6 +254,12 @@ Then upload the client code and backup data onto the device using the following 
 ```
 
 If you encounter an issue, please make sure this is the only USB device connected to your computer and reinsert the device.
+
+You can exit python interactive mode with the following command.
+
+```python
+>>> quit()
+```
 
 ### Tethered mode
 

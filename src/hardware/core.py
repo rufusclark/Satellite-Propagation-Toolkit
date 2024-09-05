@@ -124,6 +124,7 @@ class UntetheredMode:
                 # reset if the time is after the first available time
                 elif (len(self.tss) != 0) and (unix_ts > self.tss[-1]):
                     self.reset()
+                    self.sleep = False
 
     def unix_time(self) -> int:
         return time.time() - self.offset  # type: ignore
