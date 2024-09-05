@@ -40,7 +40,7 @@ foreach (var url in urls) {
     }
 }
 
-Console.WriteLine($"Loaded {tles.Count()} satellites from {groups.Length} sources");
+Console.WriteLine($"Loaded {tles.Count} satellites from {groups.Length} sources");
 
 int id;
 Tle tle;
@@ -49,6 +49,9 @@ EciCoordinate eciCoordinate;
 Vector3 eciPosition, eciVelocity;
 DateTime time = DateTime.UtcNow;
 
+int count = 0;
+
+SatelliteData[] satelliteDatas = new SatelliteData[tles.Count];
 
 foreach (var dict in tles) {
     id = dict.Key;
@@ -60,8 +63,12 @@ foreach (var dict in tles) {
     eciPosition = eciCoordinate.Position;
     eciVelocity = eciCoordinate.Velocity;
 
-    Console.WriteLine($"{tle.Name} x:{eciPosition.X:f2}km y:{eciPosition.Y:f2}km z:{eciPosition.Z:2}km x_v:{eciVelocity.X:f2}km/s y_v:{eciVelocity.Y:f2}km/s z_v:{eciVelocity.Z:f2}km/s");
+    satelliteDatas[count] = new SatelliteData(tle.Name, eciPosition.X, eciPosition.Y, eciPosition.Z, eciVelocity.X, eciVelocity.Y, eciVelocity.Z);
+
+    count++;
 }
+
+Console.WriteLine($"Populated satelliteDatas with the name, position and velocity of {satelliteDatas.Length} satellites from most recent NORAD tracking data");
 
 public class NoradSource {
     public string group;
@@ -78,5 +85,35 @@ public class NoradSource {
         get {
             return $"{group}.{format}";
         }
+    }
+}
+
+public class Vector3Float {
+    public float x;
+    public float y;
+    public float z;
+
+    public Vector3Float(float x, float y, float z) {
+        this.x = x;
+        this.y = y;
+        this.z = z; 
+    }
+
+    public Vector3Float(double x, double y,double z) {
+        this.x = (float)x;
+        this.y = (float)y;
+        this.z = (float)z;
+    }
+}
+
+public class SatelliteData {
+    public Vector3Float position;
+    public Vector3Float velocity;
+    public string name;
+
+    public SatelliteData(string name, double x, double y, double z, double x_v, double y_v, double z_v) {
+        this.position = new Vector3Float(x, y, z);
+        this.velocity = new Vector3Float(x_v, y_v, z_v);
+        this.name = name;
     }
 }
