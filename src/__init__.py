@@ -1,4 +1,9 @@
 # TODO: Write documentation
+from sys import version_info
+if version_info[0] != 3 or version_info[1] < 9:
+    raise RuntimeWarning(
+        "\n\nThis package has been designed to support python version 3.9+,\nplease install python version 3.9 or higher to run this package\n")
+
 from skyfield.api import wgs84, utc
 
 from .models import ts, Orbits
