@@ -141,7 +141,8 @@ class ImageFrame:
 
         png.from_array(pixels, "RGB").save(filename)
         if _print:
-            print(f"Saved image: {filename}")
+            print(
+                f"Saved image: {Path(filename).absolute().as_posix()}")
 
 
 class Matrix:

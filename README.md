@@ -44,8 +44,10 @@ See [hardware setup](#hardware-setup) after software setup to set up hardware as
 
 This project requires that you already have the following software installed on your machine:
 
-* python3.6+
+* python3.9+
 * pip
+
+If you do not meet these requirements, please see this tutorial for installing them, ![Installation Guide](https://www.python.org/about/gettingstarted/)
 
 ### Downloading
 

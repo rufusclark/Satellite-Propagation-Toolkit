@@ -321,8 +321,22 @@ class Sats:
 
         tags = list(tags.keys())
         tags.sort()
+
+        print("all tags:")
         for tag in tags:
             print(tag, end=", ")
+        print()
+
+    def print_all_tags_info(self) -> None:
+        tags = {}
+        # generate unique dict of all tags
+        for sat in self.sats:
+            for tag in sat.tags:
+                tags[tag] = tags.get(tag, 0) + 1
+
+        print("occurances: tag")
+        for tag, occurances in tags.items():
+            print(f"{str(occurances).rjust(7)}: {tag}")
 
 
 class SatPosition:

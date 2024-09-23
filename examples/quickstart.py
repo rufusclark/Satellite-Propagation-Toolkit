@@ -48,6 +48,11 @@ if no data is cached or the cache has expired new data will downloaded.
 greater control of data being imported is available, see `datasources.py` and `init_sats` for details.
 """
 
+sats.print_all_tags_info()
+"""
+print a list of all tags in the satellite dataset with the number of occurances
+"""
+
 matrix = Matrix(128, 128)
 """
 define the pixel size of your matrix.
