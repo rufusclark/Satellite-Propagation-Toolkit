@@ -3,3 +3,5 @@ pyserial
 typing_extensions
 geocoder
 pypng
+requests
+bs4

@@ -2,7 +2,10 @@
 from typing import List, Dict
 
 import os
+import requests
+import pickle
 from csv import DictReader
+from bs4 import BeautifulSoup
 
 from skyfield.api import load
 
@@ -31,6 +34,9 @@ class NORADSource:
     def filename(self) -> str:
         return f"{self.group}.{self._format}"
 
+    def __repr__(self) -> str:
+        return f"group: {self.group}, category: {self.category}, format: {self._format}, url: {self.url}"
+
 
 class NORAD:
     """NORAD Satellite tracking data source container
@@ -51,13 +57,79 @@ class NORAD:
         """
         self.path = path
         self._cache_TTL = cache_TTL
-        self._sources_by_group = {
-            **{group: NORADSource(group, "weather & earth resources", filetype) for group in ["weather", "noaa", "goes", "resource", "sarsat", "dmc", "tdrss", "argos", "planet", "spire"]},
-            **{group: NORADSource(group, "communications", filetype) for group in ["geo", "gpz", "intelsat", "iridium", "starlink", "orbcomm", "swarm", "x-comm", "gpz-plus", "ses", "iridium-NEXT", "oneweb", "globalstar", "amateur", "other-comm", "satnogs", "gorizont", "raduga", "molniya"]},
-            **{group: NORADSource(group, "navigation", filetype) for group in ["gnss", "gps-ops", "glo-ops", "galileo", "beidou", "sbas", "nnss", "musson"]},
-            **{group: NORADSource(group, "scientific", filetype) for group in ["science", "geodetic", "engineering", "education"]},
-            **{group: NORADSource(group, "miscellaneous", filetype) for group in ["military", "radar", "cubesat", "other"]},
-            **{group: NORADSource(group, "special-interest", filetype) for group in ["stations", "visual", "active", "analyst", "cosmos-1408-debris", "fengyun-1c-debris", "iridium-33-debris", "cosmos-2251-debris"]}}
+        self.filetype = filetype
+        self._sources_by_group = {}
+
+    def update_source_groups(self) -> None:
+        """Sends a get request to Celestrak and scrape all the TLE source groups for further proccessing (or cache data from storage)
+        """
+        url = f"https://celestrak.org/NORAD/elements/index.php?FORMAT={self.filetype}"
+
+        sources_by_group: Dict[str, NORADSource] = {}
+
+        # scape groups from CelesTrak
+        try:
+            # get webpage data and raise HTTPError is the response was unsuccesful
+            response = requests.get(url)
+            response.raise_for_status()
+
+            # parse html
+            soup = BeautifulSoup(response.text, "html.parser")
+
+            for table in soup.find_all('table', class_='striped'):
+                try:
+                    # get group name
+                    header = table.find("th").get_text(  # type: ignore
+                        strip=True)
+
+                    # get groups from the table
+                    links = table.find_all("a", title="Table")  # type: ignore
+                    urls = [link.get("href") for link in links]  # type: ignore
+                    groups = [url.split("=", 1)[1].split("&FORMAT=", 1)[  # type: ignore
+                        0] for url in urls]
+
+                    # create NORADSource to allow further processing
+                    for group in groups:
+                        sources_by_group[group] = NORADSource(
+                            group, header, self.filetype)
+                except Exception as e:
+                    print(e)
+
+            self._sources_by_group = sources_by_group
+        except Exception as e:
+            print(f"Error updating groups cache from CelesTrak: {e}")
+
+        # cache groups
+        if self._sources_by_group:
+            print("Updated NORAD groups from CelesTrak")
+            try:
+                with open(f"{self.path}NORAD.pkl", "wb") as f:
+                    pickle.dump(self._sources_by_group, f)
+                    print("NORAD groups cached")
+            except Exception as e:
+                print(f"Error caching NORAD groups: {e}")
+
+        if not self._sources_by_group:
+            # read groups from cache
+            print("Error updating groups from Celestrak: Reverting to cached historical groups (Some satellites may not be categorised or groups)")
+            try:
+                with open(f"{self.path}NORAD.pkl", "rb") as f:
+                    self._sources_by_group = pickle.load(f)
+            except Exception as e:
+                print(f"Error reading NORAD group cache: {e}")
+
+                # use historical data
+                print("Error updating groups from Celestrak: Reverting to historical groups (Some satellites may not be categorised or groups)")
+                self._sources_by_group = {
+                    **{group: NORADSource(group, "weather & earth resources", self.filetype) for group in ["weather", "noaa", "goes", "resource", "sarsat", "dmc", "tdrss", "argos", "planet", "spire"]},
+                    **{group: NORADSource(group, "communications", self.filetype) for group in ["geo", "gpz", "intelsat", "iridium", "starlink", "orbcomm", "swarm", "x-comm", "gpz-plus", "ses", "iridium-NEXT", "oneweb", "globalstar", "amateur", "other-comm", "satnogs", "gorizont", "raduga", "molniya"]},
+                    **{group: NORADSource(group, "navigation", self.filetype) for group in ["gnss", "gps-ops", "glo-ops", "galileo", "beidou", "sbas", "nnss", "musson"]},
+                    **{group: NORADSource(group, "scientific", self.filetype) for group in ["science", "geodetic", "engineering", "education"]},
+                    **{group: NORADSource(group, "miscellaneous", self.filetype) for group in ["military", "radar", "cubesat", "other"]},
+                    **{group: NORADSource(group, "special-interest", self.filetype) for group in ["stations", "visual", "active", "analyst", "cosmos-1408-debris", "fengyun-1c-debris", "iridium-33-debris", "cosmos-2251-debris"]}}
+
+        # type hinting
+        self._sources_by_group: Dict[str, NORADSource]
 
     def source_by_group(self, group: str) -> NORADSource:
         return self._sources_by_group[group]
@@ -76,10 +148,13 @@ class NORAD:
 
         # update sources
         for source in self.sources:
-            filepath = self.path + source.filename
-            if not load.exists(filepath) or load.days_old(filepath) >= self._cache_TTL:
-                load.download(source.url, filepath)
-                print(f"Updated {source.group} NORAD data sources")
+            try:
+                filepath = self.path + source.filename
+                if not load.exists(filepath) or load.days_old(filepath) >= self._cache_TTL:
+                    load.download(source.url, filepath)
+                    print(f"Updated {source.group} NORAD data sources")
+            except Exception as e:
+                print(e)
 
     def load_sats(self, sources: List[NORADSource]) -> Sats:
         # load specified sources
@@ -251,6 +326,7 @@ def init_sats() -> Sats:
     """
     # load all sats and update if old
     norad = NORAD()
+    norad.update_source_groups()
     norad.update_sources()
     sats = norad.load_all_sats().filter_old()
 
