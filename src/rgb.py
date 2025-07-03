@@ -40,3 +40,6 @@ class RGB:
         if self.B:
             out += f"blue (+{self.B})"
         return out
+
+
+BLACK = RGB(0, 0, 0)

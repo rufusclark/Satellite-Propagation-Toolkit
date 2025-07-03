@@ -1,9 +1,9 @@
 """code and utilities to work with LED matrix data, generate images and more"""
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from skyfield.timelib import Time
 
-from .rgb import RGB
+from .rgb import RGB, BLACK
 from .models import ts
 from .analysis import Modifiers
 if TYPE_CHECKING:
@@ -115,7 +115,7 @@ class ImageFrame:
     def __repr__(self) -> str:
         return f"<MatrixFrame t={self.time} {self._matrix}>"
 
-    def to_png(self, filename: str = "image.png", *, _print: bool = True, _create_path: bool = True) -> None:
+    def to_png(self, filename: str = "image.png", *, _print: bool = True, _create_path: bool = True, _background_colour: Optional[RGB] = None) -> None:
         """saves the ImageFrame object as a png file
 
         by default this will create any neccesary folders aswell and will print out a confirmation message once saved
@@ -124,6 +124,7 @@ class ImageFrame:
             filename: image filename including path. Defaults to "image.png".
             _print: whether to print a confirmation message. Defaults to True.
             _create_path: whether to create the path if it doesn't exist. Defaults to True.
+            _background_colour: specify a different pixel background colour. Defaults to Black.
         """
         if _create_path:
             from pathlib import Path
@@ -133,6 +134,14 @@ class ImageFrame:
 
         pixels = []
 
+        # change background colour from black (Optional)
+        if _background_colour:
+            def background_colour(x, y) -> None:
+                if self.get_pixel(x, y) == BLACK:
+                    self.set_pixel(x, y, _background_colour)
+            self._for_grid(background_colour)
+
+        # convert internal matrix to png
         for y in range(self._matrix.height):
             row = []
             for x in range(self._matrix.width):
