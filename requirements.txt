@@ -5,3 +5,4 @@ geocoder
 pypng
 requests
 bs4
+opencv-python

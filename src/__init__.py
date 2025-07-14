@@ -14,4 +14,4 @@ from .analysis import AlwaysPixelModifier, LaunchDateModifier, TagPixelModifier,
 from .device import *
 from .projectionmodels import TopocentricProjectionModel, GeocentricProjectionModel
 from .progress import LapTimer
-from .utility import get_estimated_latlon, factory_reset_device, reset_device
+from .utility import get_estimated_latlon, factory_reset_device, reset_device, generate_video

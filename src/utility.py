@@ -1,10 +1,43 @@
 """contains useful utilities"""
-from typing import Literal
+from typing import Literal, Optional
 
 from skyfield.toposlib import GeographicPosition
 from skyfield.api import utc, wgs84
 from src import *
+from .projectionmodels import BaseProjectionModel
+from .models import Sat
 import datetime
+import time
+import random
+import string
+import pathlib
+import shutil
+import sys
+
+
+class ProgressBar:
+    def __init__(self, tasks: int) -> None:
+        self.tasks = tasks
+        self.start_time = time.time()
+
+    def update(self, tasks_completed: int) -> None:
+        percent = tasks_completed/self.tasks
+        elapsed = time.time() - self.start_time
+
+        bar_width = 20
+        filled = int(bar_width * percent)
+        bar = "#" * filled + " " * (bar_width - filled)
+
+        eta = (elapsed / tasks_completed) * (self.tasks -
+                                             tasks_completed) if tasks_completed else 0
+
+        sys.stdout.write(
+            f"\r[{bar}] {percent:.2%} (eta: {datetime.timedelta(seconds=int(eta))})")
+        sys.stdout.flush()
+
+        if self.tasks == tasks_completed:
+            sys.stdout.write(f"\n")
+            sys.stdout.flush()
 
 
 def get_estimated_latlon() -> GeographicPosition:
@@ -155,3 +188,92 @@ def factory_reset_device(device: SUPPORTED_DEVICES, _generate_backup_images: boo
         print("You can change views on your device by pressing the buttons on your device, see \n\thttps://github.com/rufusclark/Satellite-Propagation-Toolkit?tab=readme-ov-file#hardware-operations\nfor more details")
 
     print("Please reinsert your device to complete setup")
+
+
+def generate_video(
+    model: BaseProjectionModel,
+    matrix: Matrix,
+    modifiers: Modifiers,
+    start_time: datetime.datetime,
+    duration_secs: int,
+    video_name: str = "projection_video",
+    *,
+    fps: int = 10,
+    _background_colour: Optional[RGB] = None,
+    _pixel_width_per_object: Optional[int] = None
+):
+    import cv2
+    # TODO: Also generate contextual info (print list of all sats (and in which sats))
+    # TODO: Multithread the image generation
+    # enforce tzinfo on the datetime
+    start_time = start_time.replace(tzinfo=utc)
+    vid_path = f"./images/video/{video_name}.mp4"
+    metadata_path = f"./images/video/{video_name}-metadata.txt"
+
+    # create the temp directory
+    dir_path = pathlib.Path(
+        f"./images/temp/{''.join(random.choices(string.ascii_letters + string.digits, k=10))}")
+    dir_path.mkdir(parents=True, exist_ok=True)
+    print("Creating temporary working directory")
+
+    images: list[str] = []
+    sats: list[Sat] = []
+
+    # create all the images
+    print("Generating static images")
+    timer = ProgressBar(fps * duration_secs)
+    for i in range(fps * duration_secs):
+        # propogation time
+        t = ts.from_datetime(start_time + datetime.timedelta(seconds=i/fps))
+
+        # image file path
+        images.append(str(dir_path / f"{i:06}.png"))
+
+        # propogate, render and save image
+        f = model.generate_sat_frame(t).render(modifiers)
+        f.to_png(
+            images[-1],
+            _background_colour=_background_colour, _pixel_width_per_object=_pixel_width_per_object,
+            _print=False
+        )
+
+        # save metadata
+        for satPosition in f._sat_frame.sats:
+            sat = satPosition.sat
+            if sat not in sats:
+                sats.append(sat)
+
+        timer.update(i+1)
+
+    # generate video
+    # get dimensions from the first frame
+    print("Generating video")
+    timer = ProgressBar(fps * duration_secs)
+    f_0 = cv2.imread(images[0])
+    height, width, _ = f_0.shape
+
+    # video writer
+    # You can use 'XVID' or 'avc1' for compatibility
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(vid_path, fourcc, fps, (width, height))
+
+    for i, img_name in enumerate(images):
+        frame = cv2.imread(img_name)
+        out.write(frame)
+        timer.update(i+1)
+
+    out.release()
+    print(f"Video saved to {vid_path}")
+
+    # save the metadata to file
+    with open(metadata_path, "w") as f:
+        f.write(
+            f"Total Sats: {len(sats)}\nFPS: {fps}\nDuration\n{duration_secs}s")
+        for sat in sats:
+            f.write(sat.info())
+    print(f"Metadata saved to {metadata_path}")
+
+    # delete the temp directory
+    if dir_path.exists() and dir_path.is_dir():
+        shutil.rmtree(dir_path)
+    print("Deleted temporary working directory")
