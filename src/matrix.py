@@ -80,6 +80,9 @@ class ImageFrame:
     def get_pixel(self, x: int, y: int) -> RGB:
         return self._pixels[self._idx(x, y)]
 
+    def idx_is_valid(self, x: int, y: int) -> bool:
+        return (x >= 0 and x < self._matrix.width) and (y >= 0 and y < self._matrix.height)
+
     def _for_grid(self, fn) -> None:
         for y in range(self._matrix.height):
             for x in range(self._matrix.width):
@@ -115,7 +118,7 @@ class ImageFrame:
     def __repr__(self) -> str:
         return f"<MatrixFrame t={self.time} {self._matrix}>"
 
-    def to_png(self, filename: str = "image.png", *, _print: bool = True, _create_path: bool = True, _background_colour: Optional[RGB] = None) -> None:
+    def to_png(self, filename: str = "image.png", *, _print: bool = True, _create_path: bool = True, _background_colour: Optional[RGB] = None, _pixel_width_per_object: Optional[int] = None) -> None:
         """saves the ImageFrame object as a png file
 
         by default this will create any neccesary folders aswell and will print out a confirmation message once saved
@@ -125,6 +128,7 @@ class ImageFrame:
             _print: whether to print a confirmation message. Defaults to True.
             _create_path: whether to create the path if it doesn't exist. Defaults to True.
             _background_colour: specify a different pixel background colour. Defaults to Black.
+            _pixel_width_per_object: the number of pixels width per object. Defaults to 1. 3 would mean a 3x3 box for each pixel
         """
         if _create_path:
             from pathlib import Path
@@ -133,6 +137,35 @@ class ImageFrame:
         import png
 
         pixels = []
+
+        # support more than one pixel per object (Optional)
+        # TODO: Generate a new ImageFrame from the old image frame with multiple pixels per object
+        if _pixel_width_per_object:
+            # generate new empty ImageFrame
+            new_frame = ImageFrame(
+                matrix=self._matrix,
+                time=self.time,
+                _sat_frame=self._sat_frame,
+                _modifiers=self._modifiers
+            )
+
+            # populate the ImageFrame
+            n = _pixel_width_per_object//2
+
+            def generate_pixels_per_object(x, y) -> None:
+                if self.get_pixel(x, y) != BLACK:
+                    for dx in range(-n, n+1):
+                        for dy in range(-n, n+1):
+                            nx, ny = x + dx, y + dy
+                            if self.idx_is_valid(nx, ny):
+                                new_frame.set_pixel(
+                                    nx, ny,
+                                    new_frame.get_pixel(nx, ny)
+                                    + self.get_pixel(x, y)
+                                )
+
+            self._for_grid(generate_pixels_per_object)
+            self = new_frame
 
         # change background colour from black (Optional)
         if _background_colour:
