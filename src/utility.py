@@ -195,20 +195,23 @@ def generate_video(
     matrix: Matrix,
     modifiers: Modifiers,
     start_time: datetime.datetime,
-    duration_secs: int,
-    video_name: str = "projection_video",
+    video_duration_secs: int,
+    propogation_duration_secs: int,
+    name: str = "projection_video",
     *,
     fps: int = 10,
     _background_colour: Optional[RGB] = None,
     _pixel_width_per_object: Optional[int] = None
 ):
     import cv2
-    # TODO: Also generate contextual info (print list of all sats (and in which sats))
     # TODO: Multithread the image generation
     # enforce tzinfo on the datetime
     start_time = start_time.replace(tzinfo=utc)
-    vid_path = f"./images/video/{video_name}.mp4"
-    metadata_path = f"./images/video/{video_name}-metadata.txt"
+    vid_path = f"./images/video/{name}.mp4"
+    metadata_path = f"./images/video/{name}-metadata.txt"
+
+    total_frames = fps * video_duration_secs
+    frame_interval = total_frames / propogation_duration_secs
 
     # create the temp directory
     dir_path = pathlib.Path(
@@ -221,10 +224,11 @@ def generate_video(
 
     # create all the images
     print("Generating static images")
-    timer = ProgressBar(fps * duration_secs)
-    for i in range(fps * duration_secs):
+    timer = ProgressBar(total_frames)
+    for i in range(total_frames):
         # propogation time
-        t = ts.from_datetime(start_time + datetime.timedelta(seconds=i/fps))
+        t = ts.from_datetime(
+            start_time + datetime.timedelta(seconds=i * frame_interval))
 
         # image file path
         images.append(str(dir_path / f"{i:06}.png"))
@@ -248,7 +252,7 @@ def generate_video(
     # generate video
     # get dimensions from the first frame
     print("Generating video")
-    timer = ProgressBar(fps * duration_secs)
+    timer = ProgressBar(total_frames)
     f_0 = cv2.imread(images[0])
     height, width, _ = f_0.shape
 
@@ -268,9 +272,9 @@ def generate_video(
     # save the metadata to file
     with open(metadata_path, "w") as f:
         f.write(
-            f"Total Sats: {len(sats)}\nFPS: {fps}\nDuration\n{duration_secs}s")
+            f"Total Sats: {len(sats)}\nFPS: {fps}\nVideo duration: {video_duration_secs}s\nPropogation duration: {propogation_duration_secs}s\nStart time: {start_time}\n")
         for sat in sats:
-            f.write(sat.info())
+            f.write(f"{sat.info()}\n")
     print(f"Metadata saved to {metadata_path}")
 
     # delete the temp directory
