@@ -12,7 +12,7 @@ The project is suitable for everyone from novices with little to no programming 
 * [Setup](#setup)
 * [About the tool](#about-the-tool)
 * [Testing](#testing)
-* [Generating standalone images](#generating-standalone-images)
+* [Generating standalone images and videos](#generating-standalone-images)
 * [Outreach recommendations](#outreach-recommendations)
 * [Hardware operations](#hardware-operations)
 * [Sample analysis](#sample-analysis)
@@ -26,7 +26,7 @@ The core features of the project are:
 * Automatically downloads, caches and updates satellite tracking data and metadata from [CelesTrak](https://celestrak.org/)
 * Propagating tracked objects using the industry standard SPG4 model
 * Generating 2D data frames containing Topocentric or Geocentric projections of tracked objects over a given position
-* Generating images from tracking data based on custom analysis of metadata and satellite tags
+* Generating images and videos from tracking data based on custom analysis of metadata and satellite tags
 * Displaying generated images on [supported devices](#hardware-operations) whilst tethered to a PC or standalone
 
 ![500deg Topocentric Projection about 0N, 0E](images/md/0,0%20TOPO%20500deg%20400x400.png)
@@ -108,7 +108,7 @@ This tool supports 2 projection modes:
 
 The accuracy of the propagations and the generated images have been verified against reliable 3rd party sources and proof-checked by those with a relevant university-level understanding of orbit mechanics.
 
-## Generating standalone images
+## Generating standalone images and videos
 
 This project supports generating standalone images, please see [Generating an image](#generating-an-image) for instructions and examples of generating images.
 
@@ -154,6 +154,21 @@ BEIDOU-2 M1  (launched 2007-04-13, 6328 days ago)
 ```
 
 For more adavanced analysis this can be used to categorise the number of different satellites in a given projeciton. The key methods are available without rendering an Image using the `Modifiers.key_with_analysis(sat_frame)` method.
+
+Videos can be generated via the `generate_video() function`:
+```python
+generate_video(
+    model=model,
+    modifiers=modifiers,
+    start_time=datetime(2025, 7, 17, 13, 0),
+    video_duration_secs=120,
+    propogation_duration_secs=3600,
+    fps=10,
+    name="Quickstart_video",
+    _pixel_width_per_object=5)
+```
+
+> Please note the size of satellite dots can be increased using the `_pixel_width_per_object` parameter
 
 ## Outreach recommendations
 
@@ -490,7 +505,6 @@ MicroPython stubs are available [here](https://github.com/pimoroni/pimoroni-pico
 
 This section briefly mentions some of the future improvements to this project that I was not possible to implement due to time contrainst around my internship. For most of the below the core code is in place to support there implementation without reformatting.
 
-* Generating higher resolution output images (multiple pixels per satellite) and with axis
 * Support displaying potential future satellites (and/or mega-constellations) by importing own or generating your own tracking data
 * Further optimise code by supporting multiproccessing when sequencially generating images for devices or otherwise
 * Support reuse of generated images uploaded to Pico devices. Particularly useful for more quickly uploading custom data to a large number of devices

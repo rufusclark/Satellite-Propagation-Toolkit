@@ -108,35 +108,33 @@ def factory_reset_device(device: SUPPORTED_DEVICES, _generate_backup_images: boo
 
         modifiers = [
             Modifiers(
-                # Always display as white RGB(255, 255, 255)
-                AlwaysPixelModifier(RGB(255, 255, 255))
+                AlwaysPixelModifier(WHITE)
             ),
-            # Set the colour based on when the satellite was launched
             Modifiers(
                 LaunchDateModifier(
                     datetime.datetime(1960, 1, 1), datetime.datetime(
-                        2000, 1, 1), RGB(255, 0, 0)
+                        2000, 1, 1), RED
                 ),
                 LaunchDateModifier(
                     datetime.datetime(2000, 1, 1), datetime.datetime(
-                        2020, 1, 1), RGB(0, 255, 0)
+                        2020, 1, 1), GREEN
                 ),
                 LaunchDateModifier(
                     datetime.datetime(2020, 1, 1), datetime.datetime(
-                        2040, 1, 1), RGB(0, 0, 255)
+                        2040, 1, 1), BLUE
                 )
             ),
-            # Set the colour based on satellite type
             Modifiers(
-                TagPixelModifier("communications", RGB(255, 0, 0)),
-                TagPixelModifier("weather & earth resources", RGB(0, 255, 0)),
-                TagPixelModifier("navigation", RGB(0, 0, 255))
+                FuzzyTagPixelModifier("comm", RED),
+                FuzzyTagPixelModifier(["weather", "earth"], GREEN),
+                FuzzyTagPixelModifier("nav", BLUE),
+                FuzzyNotTagPixelModifier(
+                    ["comm", "weather", "earth", "nav"], WHITE)
             ),
-            # Set the colour based on the satellite altitude
             Modifiers(
-                AltitudeModifier(0, 1000, RGB(255, 0, 0)),
-                AltitudeModifier(1000, 3000, RGB(0, 255, 0)),
-                AltitudeModifier(3000, 100000, RGB(0, 0, 255))
+                AltitudeModifier(0, 1000, RED),
+                AltitudeModifier(1000, 3000, GREEN),
+                AltitudeModifier(3000, 100000, BLUE)
             )
         ]
 

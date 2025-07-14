@@ -24,31 +24,32 @@ durations should be less than 15 minutes to prevent using all the storage space 
 
 modifiers = [
     Modifiers(
-        AlwaysPixelModifier(RGB(255, 255, 255))
+        AlwaysPixelModifier(WHITE)
     ),
     Modifiers(
         LaunchDateModifier(
             datetime.datetime(1960, 1, 1), datetime.datetime(
-                2000, 1, 1), RGB(255, 0, 0)
+                2000, 1, 1), RED
         ),
         LaunchDateModifier(
             datetime.datetime(2000, 1, 1), datetime.datetime(
-                2020, 1, 1), RGB(0, 255, 0)
+                2020, 1, 1), GREEN
         ),
         LaunchDateModifier(
             datetime.datetime(2020, 1, 1), datetime.datetime(
-                2040, 1, 1), RGB(0, 0, 255)
+                2040, 1, 1), BLUE
         )
     ),
     Modifiers(
-        TagPixelModifier("communications", RGB(100, 0, 0)),
-        TagPixelModifier("weather & earth resources", RGB(0, 100, 0)),
-        TagPixelModifier("navigation", RGB(0, 0, 100))
+        FuzzyTagPixelModifier("comm", RED),
+        FuzzyTagPixelModifier(["weather", "earth"], GREEN),
+        FuzzyTagPixelModifier("nav", BLUE),
+        FuzzyNotTagPixelModifier(["comm", "weather", "earth", "nav"], WHITE)
     ),
     Modifiers(
-        AltitudeModifier(0, 1000, RGB(100, 0, 0)),
-        AltitudeModifier(1000, 3000, RGB(0, 100, 0)),
-        AltitudeModifier(3000, 100000, RGB(0, 0, 100))
+        AltitudeModifier(0, 1000, RED),
+        AltitudeModifier(1000, 3000, GREEN),
+        AltitudeModifier(3000, 100000, BLUE)
     )
 ]
 """

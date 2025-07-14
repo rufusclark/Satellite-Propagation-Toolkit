@@ -2,6 +2,7 @@
 import init
 
 from src import *
+from datetime import datetime
 
 observer = get_estimated_latlon()
 """
@@ -88,3 +89,15 @@ image_frame.to_png("quickstart.png")
 """
 save the `ImageFrame` as a png file as "quickstart.png" 
 """
+
+"""
+want to use the same model to generate a video?
+"""
+generate_video(
+    model=model,
+    modifiers=modifier,
+    start_time=datetime.now(),
+    video_duration_secs=30,
+    propogation_duration_secs=3600,
+    name="quickstart_video"
+)
