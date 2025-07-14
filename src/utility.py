@@ -211,7 +211,7 @@ def generate_video(
     metadata_path = f"./images/video/{name}-metadata.txt"
 
     total_frames = fps * video_duration_secs
-    frame_interval = total_frames / propogation_duration_secs
+    frame_interval = propogation_duration_secs / total_frames
 
     # create the temp directory
     dir_path = pathlib.Path(
