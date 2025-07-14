@@ -43,3 +43,16 @@ class RGB:
 
 
 BLACK = RGB(0, 0, 0)
+RED = RGB(255, 0, 0)
+GREEN = RGB(0, 255, 0)
+BLUE = RGB(0, 0, 255)
+BRIGHT_CYAN = RGB(0, 255, 255)   # High contrast, very bright
+VIVID_ORANGE = RGB(255, 165, 0)   # Warm, clear distinction
+BRIGHT_LIME = RGB(166, 226, 46)  # Neon-greenish, highly visible
+MAGENTA = RGB(255, 0, 255)   # Pops well on dark
+YELLOW = RGB(255, 255, 0)   # Classic highlight, very visible
+SKY_BLUE = RGB(0, 191, 255)   # Softer than cyan, still clear
+HOT_PINK = RGB(255, 105, 180)  # Feminine pop color
+LIGHT_GRAY = RGB(211, 211, 211)  # Good neutral contrast
+CHARTREUSE = RGB(127, 255, 0)   # Green-yellow, very distinct
+CORAL_RED = RGB(255, 64, 64)   # Good warm hue

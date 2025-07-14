@@ -192,7 +192,6 @@ def factory_reset_device(device: SUPPORTED_DEVICES, _generate_backup_images: boo
 
 def generate_video(
     model: BaseProjectionModel,
-    matrix: Matrix,
     modifiers: Modifiers,
     start_time: datetime.datetime,
     video_duration_secs: int,
@@ -242,7 +241,7 @@ def generate_video(
         )
 
         # save metadata
-        for satPosition in f._sat_frame.sats:
+        for satPosition in f._sat_frame.sats:  # type:ignore
             sat = satPosition.sat
             if sat not in sats:
                 sats.append(sat)
@@ -254,16 +253,16 @@ def generate_video(
     print("Generating video")
     timer = ProgressBar(total_frames)
     f_0 = cv2.imread(images[0])
-    height, width, _ = f_0.shape
+    height, width, _ = f_0.shape  # type:ignore
 
     # video writer
     # You can use 'XVID' or 'avc1' for compatibility
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # type:ignore
     out = cv2.VideoWriter(vid_path, fourcc, fps, (width, height))
 
     for i, img_name in enumerate(images):
         frame = cv2.imread(img_name)
-        out.write(frame)
+        out.write(frame)  # type:ignore
         timer.update(i+1)
 
     out.release()

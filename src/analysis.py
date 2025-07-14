@@ -12,6 +12,11 @@ class BasePixelModifier:
     """base class for modifiers that change rgb values based on Sat tags or otherwise
     """
 
+    modifier: RGB
+
+    def _is_match(self, sat: SatPosition) -> bool:
+        raise NotImplementedError
+
     def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
         """handle the modifier, check if the sat fits the criterium and return the new rgb values as appropriately
 
@@ -22,7 +27,9 @@ class BasePixelModifier:
         Returns:
             new pixel RGB object
         """
-        raise NotImplementedError
+        if self._is_match(sat):
+            rgb += self.modifier
+        return rgb
 
     def info(self) -> str:
         raise NotImplementedError()
@@ -35,58 +42,69 @@ class AlwaysPixelModifier(BasePixelModifier):
         """create a new pixel modifier that will always change the colour of the pixel by adding the modifier to the current pixel if any of the tags match the sat"""
         self.modifier = modifier
 
-    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
-        return rgb + self.modifier
+    def _is_match(self, sat: SatPosition) -> bool:
+        return True
 
     def info(self) -> str:
         return f"{self.modifier.info()} for all sats"
 
 
 class TagPixelModifier(BasePixelModifier):
-    """change rgb value of pixel based on sat tags
+    """change rgb value of pixel based on sat tags (exact match)
     """
 
-    def __init__(self, tags: list[str] | str, modifer: RGB) -> None:
+    def __init__(self, tags: list[str] | str, modifier: RGB) -> None:
         """create a new pixel modifier that will change the colour of the pixel by adding the modifier to the current pixel if any of the tags match the sat
-
-        Args:
-            tags: string or list of string tags
-            modifer: RGB object
-        """
-        if isinstance(tags, str):
-            self.tags = [tags.lower()]
-        else:
-            self.tags = [tag.lower() for tag in tags]
-        self.modifer = modifer
-
-    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
-        if any(tag in sat.sat.tags for tag in self.tags):
-            rgb += self.modifer
-        return rgb
-
-    def info(self) -> str:
-        return f"{self.modifer.info()} if sat includes one of following tags: {', '.join(self.tags)}"
-
-
-class NotTagPixelMofidier(TagPixelModifier):
-    """change rgb value based on not including any of these sat tags"""
-
-    def __init__(self, tags: list[str] | str, modifer: RGB) -> None:
-        """create a new pixel modifier that wil change the colour of the pixel by adding the modifier to the current pixel if none of the tags match with the sat tags
 
         Args:
             tags: string or list of string tags
             modifier: RGB object
         """
-        super().__init__(tags, modifer)
+        if isinstance(tags, str):
+            self.tags = [tags.lower()]
+        else:
+            self.tags = [tag.lower() for tag in tags]
+        self.modifier = modifier
 
-    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
-        if not any(tag in sat.sat.tags for tag in self.tags):
-            rgb += self.modifer
-        return rgb
+    def _is_match(self, sat: SatPosition) -> bool:
+        return any(tag in sat.sat.tags for tag in self.tags)
 
     def info(self) -> str:
-        return f"{self.modifer.info()} if sat doesn't include any of following tags: {', '.join(self.tags)}"
+        return f"{self.modifier.info()} if sat includes one of following tags: {', '.join(self.tags)}"
+
+
+class NotTagPixelMofidier(TagPixelModifier):
+    """change rgb value based on not including any of these sat tags"""
+
+    def _is_match(self, sat: SatPosition) -> bool:
+        return not super()._is_match(sat)
+
+    def info(self) -> str:
+        return f"{self.modifier.info()} if sat doesn't include any of following tags: {', '.join(self.tags)}"
+
+
+class FuzzyTagPixelModifier(TagPixelModifier):
+    """change rgb value of pixel based on sat tags (if sat tag is within one of the given search tags)
+
+    i.e. "comm" would match to "communication" and "navigation and communication" """
+
+    def _is_match(self, sat: SatPosition) -> bool:
+        sat_tags = sat.sat.tags
+        search_tags = self.tags
+        return any(search_tag in sat_tag for search_tag in search_tags for sat_tag in sat_tags)
+
+    def info(self) -> str:
+        return f"{self.modifier.info()} if sat is within one of following tags: {', '.join(self.tags)}"
+
+
+class FuzzyNotTagPixelModifier(FuzzyTagPixelModifier):
+    """change rgb value of pixel based on sat tags (if sat tag is not within one of the given search tags)"""
+
+    def _is_match(self, sat: SatPosition) -> bool:
+        return not super()._is_match(sat)
+
+    def info(self) -> str:
+        return f"{self.modifier.info()} if sat is not within one of following tags: {', '.join(self.tags)}"
 
 
 class LaunchDateModifier(BasePixelModifier):
@@ -104,12 +122,10 @@ class LaunchDateModifier(BasePixelModifier):
         self.max_datetime = max_datetime
         self.modifier = modifier
 
-    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
+    def _is_match(self, sat: SatPosition) -> bool:
         if not sat.sat.launch_date:
-            return rgb
-        if self.min_datetime < sat.sat.launch_date and self.max_datetime > sat.sat.launch_date:
-            rgb += self.modifier
-        return rgb
+            return False
+        return self.min_datetime < sat.sat.launch_date and self.max_datetime > sat.sat.launch_date
 
     def info(self) -> str:
         return f"{self.modifier.info()} if a sats launch date is between {self.min_datetime.date().isoformat()} and {self.max_datetime.date().isoformat()}"
@@ -128,14 +144,12 @@ class AltitudeModifier(BasePixelModifier):
         self.max_alt = max_alt
         self.modifier = modifier
 
-    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
+    def _is_match(self, sat: SatPosition) -> bool:
         if sat.altitude == -1:
             raise Warning(
                 "No altitude specified with sat, orbit altitude modifier is not support for this reference frame")
-            return rgb
-        if self.min_alt < sat.altitude and self.max_alt > sat.altitude:
-            rgb += self.modifier
-        return rgb
+            return False
+        return self.min_alt < sat.altitude and self.max_alt > sat.altitude
 
     def info(self) -> str:
         return f"{self.modifier.info()} if a sats altitude is between {self.min_alt}km and {self.max_alt}km"
@@ -154,14 +168,12 @@ class DistanceModifier(BasePixelModifier):
         self.max_distance = max_distance
         self.modifier = modifier
 
-    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
+    def _is_match(self, sat: SatPosition) -> bool:
         if sat.distance == -1:
             raise Warning(
                 "No distance specified with sat, orbit altitude modifier is not support for this reference frame")
-            return rgb
-        if self.min_distance < sat.distance and self.max_distance > sat.distance:
-            rgb += self.modifier
-        return rgb
+            return False
+        return self.min_distance < sat.distance and self.max_distance > sat.distance
 
     def info(self) -> str:
         return f"{self.modifier.info()} if a sats distance from observer is between {self.min_distance}km and {self.max_distance}km"
