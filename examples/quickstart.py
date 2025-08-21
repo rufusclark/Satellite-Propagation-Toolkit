@@ -1,9 +1,9 @@
 """quickstart script for generating an image of the current satellites above your heads"""
+
 import init
-
 from src import *
-from datetime import datetime
 
+# observer = wgs84.latlon(0, 0)
 observer = get_estimated_latlon()
 """
 define the observer location from estimated ip location.
@@ -49,7 +49,16 @@ if no data is cached or the cache has expired new data will downloaded.
 greater control of data being imported is available, see `datasources.py` and `init_sats` for details.
 """
 
-sats.print_all_tags_info()
+# years = 50
+# MOCAT_data = MOCATReader("./data/MOCAT/initial orbital capacity.csv")
+# sats = MOCAT_data.read_yrs(years).to_SatelliteSet(sats)
+"""
+uncomment this section to use create a new selection of satellites based on the current distribution of satellites and MOCAT (https://github.com/ARCLab-MIT/MOCAT-SSEM) future capacity data
+
+values in years between 0 and 100 are allowed
+"""
+
+# sats.print_all_tags()
 """
 print a list of all tags in the satellite dataset with the number of occurances
 """
@@ -61,16 +70,28 @@ define the pixel size of your matrix.
 this may be either the size of your image output or your LED display if this is being sent to an external device.
 """
 
-model = TopocentricProjectionModel.from_FoV(matrix, sats, observer, FoV)
+propagation_model = SGP4Propagation()
 """
-create the topocentric projection model combining the matrix, sats, observer and FoV.
+define a propagation model to use
+
+this is the method used to calculate where the satellites are"""
+
+orbital_positions = propagation_model.propagate(sats, t)
+"""
+calculate the satellite positions using the defined satellite model, provived `SatelliteSet` and `Time`
+"""
+
+model = TopocentricProjection.from_FoV(matrix, observer, FoV)
+# model = GeocentricProjectionModel.from_FoV(matrix, observer, FoV)
+"""
+define a topocentric projection model combining the matrix, observer and FoV.
 
 geocentric projections are also available using the `GeocentricProjectionModel` class which implements with exactly the same interface.
 """
 
-sat_frame = model.generate_sat_frame(t)
+sat_frame = model.project(orbital_positions)
 """
-propogate all the sats and generate a `SatFrame` (2D matrix containing all sats that fall within it's bounds after being projected).
+project the orbital position data for the satellites onto a 2D frame using the above model.
 """
 
 image_frame = sat_frame.render(modifier)
@@ -80,7 +101,7 @@ render the sat frame with the modifiers defined above to create an `ImageFrame` 
 this `ImageFrame` can be saved or sent to an external device.
 """
 
-print(image_frame.info())
+print(image_frame.key_info())
 """
 print contextual information about the `ImageFrame` that has been generated including the satellites that are included within the frame.
 """
@@ -89,15 +110,3 @@ image_frame.to_png("quickstart.png")
 """
 save the `ImageFrame` as a png file as "quickstart.png" 
 """
-
-"""
-want to use the same model to generate a video?
-"""
-generate_video(
-    model=model,
-    modifiers=modifier,
-    start_time=datetime.now(),
-    video_duration_secs=30,
-    propogation_duration_secs=3600,
-    name="quickstart_video"
-)

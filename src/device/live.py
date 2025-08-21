@@ -78,7 +78,8 @@ class LiveInterface:
         """
         # create a blank frame for comparison if it doesn't exist
         if not self._last_frame:
-            self._last_frame = frame._matrix._empty_frame()
+            self._last_frame = ImageFrame(
+                frame.sat_frame, frame.modifiers, render=False)
             self.clear_display()
 
         # update pixels that require update

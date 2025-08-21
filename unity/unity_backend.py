@@ -22,6 +22,9 @@ if __name__ == "__main__":
     t = ts.now()
     unix_timestamp = int(t.utc_datetime().timestamp())  # type: ignore
 
+    # define propagation model
+    propagation_model = SGP4Propagation()
+
     # generate path
     dir = "./data/csv/"
     file = f"ITRS{unix_timestamp}.csv"
@@ -38,8 +41,8 @@ if __name__ == "__main__":
 
         # iterate through and propagate all sats
         for sat in sats.sats:
-            x, y, z, x_v, y_v, z_v = sat.ITRS_cartesian_position_and_velocity_at(
-                t)
+            position = propagation_model.propagate(sats, t)[0]
+            x, y, z, x_v, y_v, z_v = position.geo.cartesian_position_and_velocity()
 
             # remove invalid projection from data
             valid = True

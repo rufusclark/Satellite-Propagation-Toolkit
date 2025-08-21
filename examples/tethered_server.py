@@ -61,13 +61,18 @@ this line retreives the dimensions of the device display from the device before 
 occasionally this line may result in the program halting or freezing. this can be resolved be reinserting the device and running the script again.
 """
 
-model = TopocentricProjectionModel.from_FoV(matrix, sats, observer, FoV)
+propagation_model = SGP4Propagation()
+"""
+define a propagation model to use
+
+this is the method used to calculate where the satellites are"""
+
+projection_model = TopocentricProjection.from_FoV(matrix, observer, FoV)
 """
 create the topocentric projection model combining the matrix, sats, observer and FoV.
 
 geocentric projections are also available using the `GeocentricProjectionModel` class which implements with exactly the same interface.
 """
-
 print("Starting live update to device")
 
 timer = LapTimer()
@@ -82,7 +87,10 @@ try:
         set the propagation time to the current time.
         """
 
-        frame = model.generate_sat_frame(t).render(modifier)
+        orbital_positions = propagation_model.propagate(sats, t)
+        """propagate satellites"""
+
+        frame = projection_model.project(orbital_positions).render(modifier)
         """
         generate an image from the propagated sat locations using the supplied modifier.
 

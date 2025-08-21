@@ -3,9 +3,10 @@
 from .pyboard import Pyboard
 from .tools import autoport
 from ..progress import LapTimer
-from ..projectionmodels import BaseProjectionModel
+from ..projection import BaseProjection
 from ..analysis import Modifiers
-from ..models import ts
+from ..models import ts, SatelliteSet
+from ..propagation import BasePropagation
 import datetime
 
 
@@ -200,7 +201,9 @@ class RemoteInterface:
 
     def generate_images_to_device(
             self,
-            model: BaseProjectionModel,
+            sats: SatelliteSet,
+            propagation_model: BasePropagation,
+            projection_model: BaseProjection,
             modifiers: list[Modifiers],
             times: list[datetime.datetime],
             *,
@@ -258,7 +261,10 @@ class RemoteInterface:
             t = ts.from_datetime(dt)
 
             # propagate satellites
-            sat_frame = model.generate_sat_frame(t)
+            orbital_positions = propagation_model.propagate(sats, t)
+
+            # project satellites
+            sat_frame = projection_model.project(orbital_positions)
 
             # generate and save image for each modifier
             for idx, modifier in enumerate(modifiers):

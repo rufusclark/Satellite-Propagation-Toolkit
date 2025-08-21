@@ -2,10 +2,9 @@
 from typing import TYPE_CHECKING
 
 from .rgb import RGB
-from .models import SatPosition
 from datetime import datetime
 if TYPE_CHECKING:
-    from .projectionmodels import SatFrame
+    from .projection import SatFrame, FramePosition
 
 
 class BasePixelModifier:
@@ -13,11 +12,15 @@ class BasePixelModifier:
     """
 
     modifier: RGB
+    name: str
 
-    def _is_match(self, sat: SatPosition) -> bool:
+    def _is_match(self, sat: "FramePosition") -> bool:
         raise NotImplementedError
 
-    def handle(self, sat: SatPosition, rgb: RGB) -> RGB:
+    def description(self) -> str:
+        raise NotImplementedError()
+
+    def handle(self, sat: "FramePosition", rgb: RGB) -> RGB:
         """handle the modifier, check if the sat fits the criterium and return the new rgb values as appropriately
 
         Args:
@@ -31,27 +34,37 @@ class BasePixelModifier:
             rgb += self.modifier
         return rgb
 
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "modifier": self.modifier,
+            "description": self.description()
+        }
+
     def info(self) -> str:
-        raise NotImplementedError()
+        from pprint import pformat
+        return pformat(self.to_dict())
 
 
 class AlwaysPixelModifier(BasePixelModifier):
     """always changes rgb value of pixel for sat"""
+    name = "AlwaysPixelModifier"
 
     def __init__(self, modifier: RGB) -> None:
         """create a new pixel modifier that will always change the colour of the pixel by adding the modifier to the current pixel if any of the tags match the sat"""
         self.modifier = modifier
 
-    def _is_match(self, sat: SatPosition) -> bool:
+    def _is_match(self, sat: "FramePosition") -> bool:
         return True
 
-    def info(self) -> str:
-        return f"{self.modifier.info()} for all sats"
+    def description(self) -> str:
+        return "applied to all satellites"
 
 
 class TagPixelModifier(BasePixelModifier):
     """change rgb value of pixel based on sat tags (exact match)
     """
+    name = "TagPixelModifier"
 
     def __init__(self, tags: list[str] | str, modifier: RGB) -> None:
         """create a new pixel modifier that will change the colour of the pixel by adding the modifier to the current pixel if any of the tags match the sat
@@ -66,21 +79,21 @@ class TagPixelModifier(BasePixelModifier):
             self.tags = [tag.lower() for tag in tags]
         self.modifier = modifier
 
-    def _is_match(self, sat: SatPosition) -> bool:
+    def _is_match(self, sat: "FramePosition") -> bool:
         return any(tag in sat.sat.tags for tag in self.tags)
 
-    def info(self) -> str:
-        return f"{self.modifier.info()} if sat includes one of following tags: {', '.join(self.tags)}"
+    def description(self) -> str:
+        return f"applied to all satellites if they include one of the following tags: {', '.join(self.tags)}"
 
 
 class NotTagPixelMofidier(TagPixelModifier):
     """change rgb value based on not including any of these sat tags"""
 
-    def _is_match(self, sat: SatPosition) -> bool:
+    def _is_match(self, sat: "FramePosition") -> bool:
         return not super()._is_match(sat)
 
-    def info(self) -> str:
-        return f"{self.modifier.info()} if sat doesn't include any of following tags: {', '.join(self.tags)}"
+    def description(self) -> str:
+        return f"applied to all satellites if they don't include any of the following tags: {', '.join(self.tags)}"
 
 
 class FuzzyTagPixelModifier(TagPixelModifier):
@@ -88,23 +101,23 @@ class FuzzyTagPixelModifier(TagPixelModifier):
 
     i.e. "comm" would match to "communication" and "navigation and communication" """
 
-    def _is_match(self, sat: SatPosition) -> bool:
+    def _is_match(self, sat: "FramePosition") -> bool:
         sat_tags = sat.sat.tags
         search_tags = self.tags
         return any(search_tag in sat_tag for search_tag in search_tags for sat_tag in sat_tags)
 
-    def info(self) -> str:
-        return f"{self.modifier.info()} if sat is within one of following tags: {', '.join(self.tags)}"
+    def description(self) -> str:
+        return f"applied to all satellites where satellites tags are within any of the following tags: {', '.join(self.tags)}"
 
 
 class FuzzyNotTagPixelModifier(FuzzyTagPixelModifier):
     """change rgb value of pixel based on sat tags (if sat tag is not within one of the given search tags)"""
 
-    def _is_match(self, sat: SatPosition) -> bool:
+    def _is_match(self, sat: "FramePosition") -> bool:
         return not super()._is_match(sat)
 
-    def info(self) -> str:
-        return f"{self.modifier.info()} if sat is not within one of following tags: {', '.join(self.tags)}"
+    def description(self) -> str:
+        return f"applied to all satellites where satellites tags are not within any of the following tags: {', '.join(self.tags)}"
 
 
 class LaunchDateModifier(BasePixelModifier):
@@ -122,13 +135,13 @@ class LaunchDateModifier(BasePixelModifier):
         self.max_datetime = max_datetime
         self.modifier = modifier
 
-    def _is_match(self, sat: SatPosition) -> bool:
+    def _is_match(self, sat: "FramePosition") -> bool:
         if not sat.sat.launch_date:
             return False
         return self.min_datetime < sat.sat.launch_date and self.max_datetime > sat.sat.launch_date
 
-    def info(self) -> str:
-        return f"{self.modifier.info()} if a sats launch date is between {self.min_datetime.date().isoformat()} and {self.max_datetime.date().isoformat()}"
+    def description(self) -> str:
+        return f"applied to all satellites which were launched between {self.min_datetime.date().isoformat()} and {self.max_datetime.date().isoformat()}"
 
 
 class AltitudeModifier(BasePixelModifier):
@@ -144,15 +157,12 @@ class AltitudeModifier(BasePixelModifier):
         self.max_alt = max_alt
         self.modifier = modifier
 
-    def _is_match(self, sat: SatPosition) -> bool:
-        if sat.altitude == -1:
-            raise Warning(
-                "No altitude specified with sat, orbit altitude modifier is not support for this reference frame")
-            return False
-        return self.min_alt < sat.altitude and self.max_alt > sat.altitude
+    def _is_match(self, sat: "FramePosition") -> bool:
+        alt = sat.orbital_position.geo.alt  # [km]
+        return self.min_alt < alt and self.max_alt > alt
 
-    def info(self) -> str:
-        return f"{self.modifier.info()} if a sats altitude is between {self.min_alt}km and {self.max_alt}km"
+    def description(self) -> str:
+        return f"applied to all satellites which have an altitude between {self.min_alt}km and {self.max_alt}km"
 
 
 class DistanceModifier(BasePixelModifier):
@@ -168,15 +178,17 @@ class DistanceModifier(BasePixelModifier):
         self.max_distance = max_distance
         self.modifier = modifier
 
-    def _is_match(self, sat: SatPosition) -> bool:
-        if sat.distance == -1:
+    def _is_match(self, sat: "FramePosition") -> bool:
+        distance = sat.orbital_position.topo.distance
+        if not distance:
             raise Warning(
-                "No distance specified with sat, orbit altitude modifier is not support for this reference frame")
-            return False
-        return self.min_distance < sat.distance and self.max_distance > sat.distance
+                "Distance is only calculated from an observer when using Topocentric projections. Perhaps use Altitude instead if this is the case"
+            )
 
-    def info(self) -> str:
-        return f"{self.modifier.info()} if a sats distance from observer is between {self.min_distance}km and {self.max_distance}km"
+        return self.min_distance < distance and self.max_distance > distance
+
+    def description(self) -> str:
+        return f"applied to all satellites which have a distance from observer between {self.min_distance}km and {self.max_distance}km"
 
 
 class Modifiers:
@@ -185,12 +197,34 @@ class Modifiers:
     def __init__(self, *modifiers: BasePixelModifier) -> None:
         self.modifiers = modifiers
 
+    def key_to_dict(self) -> list:
+        """return a list of dictionaries explaining the key for the Image and modifiers"""
+        return [modifier.to_dict() for modifier in self.modifiers]
+
+    def key_with_analysis_to_dict(self, sat_frame: "SatFrame") -> list:
+        """return a list of dictionaries explaining the key for the Image and modifiers alongs with the number in each category"""
+        out = []
+        for modifier in self.modifiers:
+            item = modifier.to_dict()
+            item["count"] = sum(
+                [modifier.handle(sat, RGB()) != RGB()
+                 for sat in sat_frame.frame_positions]
+            )
+            out.append(item)
+        return out
+
+    def info(self) -> str:
+        from pprint import pformat
+        return pformat(self.key_to_dict())
+
     def key(self) -> str:
         """return a string formatted key ready to be printed for the included modifiers"""
+        raise NotImplementedError()
         return "Key\n\t" + "\n\t".join([modifier.info() for modifier in self.modifiers])
 
     def key_with_analysis(self, sat_frame: "SatFrame") -> str:
         """return a sring formatted key with included breakdown of the data in the SatFrame"""
+        raise NotImplementedError()
         return f"Key (total sats = {sat_frame.number_of_sats})\n\t" + "\n\t".join([
-            modifier.info() + f" (sats = {sum([modifier.handle(sat, RGB()) != RGB() for sat in sat_frame.sats])})" for modifier in self.modifiers
+            modifier.info() + f" (sats = {sum([modifier.handle(sat, RGB()) != RGB() for sat in sat_frame.frame_positions])})" for modifier in self.modifiers
         ])
