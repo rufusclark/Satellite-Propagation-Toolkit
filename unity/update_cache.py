@@ -27,5 +27,5 @@ if __name__ == "__main__":
 
             # wait for 24 hours
             print(
-                f"[API Cache] Sleeping for 24 hours (until {datetime.datetime.now() + datetime.timedelta(hours=24)})")
-            time.sleep(60*60*24)
+                f"[API Cache] Sleeping for 15 minutes (until {datetime.datetime.now() + datetime.timedelta(minutes=15)})")
+            time.sleep(60*15)
