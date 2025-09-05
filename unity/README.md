@@ -77,8 +77,10 @@ Additional MOCAT datasets can be integrated with this API by adding the filepath
 
 To host the API get started by cloning the repo and installing the Python requirements (see [README](../README.md) this detailed instructions). Then from the repositries root directory in 2 seperate terminals start the API server and response caching scripts. It is possible to just use the API server although this will result in slow responses that have not been cached (up to 10 seconds on a fast internet connection).
 
+Expect the first run to be very slow as all the data is downloaded and proccessed in the background.
+
 ```bash
-waitress-server --port=8000 unity.app:app
+waitress-serve --port=8000 unity.app:app
 python3 .\unity\update_cache.py
 ```
 

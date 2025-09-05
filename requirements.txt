@@ -12,3 +12,4 @@ reportlab
 flask
 flask-compress
 waitress
+matplotlib
