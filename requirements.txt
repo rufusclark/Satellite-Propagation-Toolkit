@@ -6,3 +6,10 @@ pypng
 requests
 bs4
 opencv-python
+scikit-learn
+imageio
+reportlab
+flask
+flask-compress
+waitress
+matplotlib

@@ -1,24 +1,290 @@
 """contains models required to proccess satellite data"""
-from typing import Callable, List, Dict, Tuple
+from typing import Callable, List, Dict, Tuple, Optional, TYPE_CHECKING
 from typing_extensions import Self
 
-from datetime import datetime, date
+from datetime import datetime, timedelta
 
-from skyfield.api import EarthSatellite, load, wgs84
+from skyfield.api import EarthSatellite, load, wgs84, utc
 from skyfield.toposlib import GeographicPosition
 from skyfield.timelib import Time
 from skyfield.framelib import itrs
 
+from sgp4.api import Satrec, WGS84
+
+from numpy import rad2deg, pi
 
 # Time scale for Earth Orbiting Satellites
 ts = load.timescale()
 
+# Autoincrement id for new Sats
+counter = 100000
 
-class Sat:
-    def __init__(self, fields, group: str = "", category: str = "") -> None:
-        self.tags = [group.lower(), category.lower()]
-        self._sat = EarthSatellite.from_omm(ts, fields)
-        self.launch_date = None
+
+def get_next_id():
+    global counter
+    counter += 1
+    if counter >= 339999:
+        counter = 100000
+    return counter
+
+
+class Satellite:
+    def __init__(self, sat: EarthSatellite, group: str = "", category: str = "") -> None:
+        self.tags = list(filter(None, [group.lower(), category.lower()]))
+        self._sat = sat
+        self.group = group.lower()
+        self.category = category.lower()
+        self._object_type = None
+        self._ops_status = None
+        self._owner = None
+        self._launch_date = None
+        self._launch_site = None
+        self._launch_country = None
+
+    @classmethod
+    def from_tle(cls, fields, group: str = "", category: str = "") -> Self:
+        """See `datasources.py` for usage"""
+        return cls(
+            sat=EarthSatellite.from_omm(ts, fields),
+            group=group,
+            category=category
+        )
+
+    @classmethod
+    def from_orbital_elements(
+        cls,
+        eccentricity: float,
+        argument_of_perigee: float,
+        inclination: float,
+        mean_anomaly: float,
+        mean_motion: float,
+        RAAN: float,
+        epoch: Optional[datetime] = None,
+        bstar: float = 0,
+        ndot: float = 0,
+        nndot: float = 0,
+        name: str = "",
+        group: str = "",
+        category: str = ""
+    ) -> Self:
+        """generate a new `Satellite` object from orbital parameters
+
+        Args:
+            eccentricity: eccentricty]
+            argument_of_perigee: arguemtn of perigee [rad]
+            inclination: inclination [rad]
+            mean_anomaly: mean anomaly [rad]
+            mean_motion: mean motion [rad/min]
+            RAAN: right ascension of ascending node [rad]
+            epoch: epoch `datetime` of orbital parameters. Defaults to None.
+            bstar: drag coefficient [/r_E]. Defaults to 0.
+            ndot: ballistic coefficient [rad/min^2]. Defaults to 0.
+            nndot: second derivative of mean motion [rad/min^3]. Defaults to 0.
+            group: group tag. Defaults to "".
+            category: category string. Defaults to "".
+
+        Returns:
+            `Satellite` object
+        """
+        # TODO: Add name to `Satellite` object
+
+        # calculate the number of days since epoch
+        if not epoch:
+            epoch = datetime.now(tz=utc)
+        epoch_days = (
+            epoch - datetime(1949, 12, 31, 0, 0, 0, tzinfo=utc)
+        ).total_seconds() / 86400
+
+        # create SPG4 object
+        satrec = Satrec()
+        satrec.sgp4init(
+            WGS84,            # gravity model
+            'i',              # 'a' = old AFSPC mode, 'i' = improved mode
+            get_next_id(),    # satnum: Satellite number
+            epoch_days,        # epoch: days since 1949 December 31 00:00 UT
+            bstar,       # bstar: drag coefficient (/earth radii)
+            ndot,  # ndot: ballistic coefficient (radians/minute^2)
+            # nddot: second derivative of mean motion (radians/minute^3)
+            nndot,
+            eccentricity,        # ecco: eccentricity
+            argument_of_perigee,  # argpo: argument of perigee (radians)
+            inclination,  # inclo: inclination (radians)
+            mean_anomaly,  # mo: mean anomaly (radians)
+            mean_motion,  # no_kozai: mean motion (radians/minute)
+            # nodeo: right ascension of ascending node (radians)
+            RAAN,
+        )
+
+        # wrap in skyfield object
+        sat = cls(
+            sat=EarthSatellite.from_satrec(satrec, ts),
+            group=group,
+            category=category
+        )
+
+        # manually add name to the sat
+        sat._sat.name = name
+
+        return sat
+
+    def to_tle(self) -> list[str]:
+        # !
+        # !
+        # !
+        # ! Change of implementation - store tle on creation or generate reasonable data for Satellites made with other methods
+        # !
+        # !
+        # !
+
+        raise NotImplementedError(
+            "This feature is yet to be completely implemented"
+        )
+
+        # TODO: Implement tle f-strings
+
+        # line two
+        # satellite number
+        sat_no = f"{self.satellite_number:05}" if self.satellite_number <= 99999 else "00000"
+        # TODO: Implement line two
+
+        # line three
+        i = f"{rad2deg(self.inclination):07.4f}" if rad2deg(
+            self.inclination) <= 999 else "000.0000"  # inclination degrees
+        RAAN = f"{rad2deg(self.right_ascension_of_ascending_node):07.4f}" if rad2deg(
+            self.right_ascension_of_ascending_node) <= 999 else "000.0000"  # RAAN degrees
+        e = f"{self.eccentricity*10000000:07d}" if self.eccentricity <= 1 else "0000000"
+        argument_of_perigee = f"{rad2deg(self.argument_of_perigee):07.4f}" if rad2deg(
+            self.argument_of_perigee) <= 999 else "000.0000"  # argument of perigee degrees
+        mean_anomaly = f"{rad2deg(self.mean_anomaly):07.4f}" if rad2deg(
+            self.mean_anomaly) <= 999 else "000.0000"  # mean anomaly degrees
+        mean_motion = f"{self.mean_motion*(720/pi):011.8f}" if self.mean_motion else "00.00000000"
+        rev_num = ...
+        checksum = ...
+
+        return [
+            self.name,
+            f"1 {sat_no}U",
+            f"2 {sat_no} {i} {RAAN} {e} {argument_of_perigee} {mean_anomaly} {mean_motion}{rev_num}{checksum}"
+        ]
+
+    @property
+    def object_type(self) -> str | None:
+        return self._object_type
+
+    @property
+    def operational_status(self) -> str | None:
+        return self._ops_status
+
+    @property
+    def element_set_no(self) -> int:
+        return self._sat.model.elnum
+
+    @property
+    def ndot(self) -> float:
+        """first time derivative of the mean motion
+
+        ignored by SPG4"""
+        return self._sat.model.ndot
+
+    @property
+    def owner(self) -> str | None:
+        return self._owner
+
+    @property
+    def launch_date(self) -> datetime | None:
+        return self._launch_date
+
+    @property
+    def launch_age(self) -> timedelta:
+        if not self.launch_date:
+            return timedelta(-1)
+        return (datetime.now() - self.launch_date)
+
+    @property
+    def launch_site(self) -> str | None:
+        return self._launch_site
+
+    @property
+    def launch_country(self) -> str | None:
+        """this represents the launch site country not the owner, although they may be the same"""
+        return self._launch_country
+
+    @property
+    def norad_cat_id(self) -> int:
+        return self._sat.model.satnum
+
+    @property
+    def b_star(self) -> float:
+        """ballistic drag coefficient B* in inverse earth radii"""
+        return self._sat.model.bstar
+
+    @property
+    def inclination(self) -> float:
+        """inclination [radians]"""
+        return self._sat.model.inclo
+
+    @property
+    def right_ascension_of_ascending_node(self) -> float:
+        """right ascension of ascending node [radians]"""
+        return self._sat.model.nodeo
+
+    @property
+    def eccentricity(self) -> float:
+        return self._sat.model.ecco
+
+    @property
+    def argument_of_perigee(self) -> float:
+        """argument of perigee [radians]"""
+        return self._sat.model.argpo
+
+    @property
+    def mean_anomaly(self) -> float:
+        """mean anomaly [radians]"""
+        return self._sat.model.mo
+
+    @property
+    def mean_motion(self) -> float:
+        """mean motion [radians per minute]"""
+        return self._sat.model.no_kozai
+
+    @property
+    def revolution_number_at_epoch(self) -> int:
+        """revelotion number at epoch [Revs]"""
+        return self._sat.model.revnum
+
+    def details_to_dict(self) -> dict:
+        return {
+            "details": {
+                "name": self.name,
+                "launch date": self.launch_date.date().isoformat() if self.launch_date else "Unknown",
+                "group": self.group,
+                "category": self.category,
+                "NORAD CAT ID": self.norad_cat_id,
+                "launch site": self.launch_site if self.launch_site else "Unknown",
+                "owner": self.owner if self.owner else "Unknown",
+                "object type": self.object_type if self.object_type else "Unknown",
+                "operational status": self.operational_status if self.operational_status else "Unknown",
+                "tags": self.tags
+            }
+        }
+
+    def orbital_parameters_to_dict(self) -> dict:
+        return {
+            "inclination [rads]": self.inclination,
+            "ballastic drag coefficient (B*) [inverse earth radii]": self.b_star,
+            "right ascension of ascending node [rads]": self.right_ascension_of_ascending_node,
+            "eccentricity": self.eccentricity,
+            "argument of perigee [rads]": self.argument_of_perigee,
+            "mean anomaly [rads]": self.mean_anomaly,
+            "mean motion [rads/min]": self.mean_motion,
+            "revolution number at epoch [revs]": self.revolution_number_at_epoch
+
+        }
+
+    def to_dict(self) -> dict:
+        out = self.details_to_dict()
+        out["orbital parameters"] = self.orbital_parameters_to_dict()
+        return out
 
     def info(self) -> str:
         """return information about each satellite
@@ -26,12 +292,8 @@ class Sat:
         Returns:
             str information output
         """
-        if self.launch_date:
-            launched = f" (launched {self.launch_date.date().isoformat()}, {(date.today() - self.launch_date.date()).days} days ago)"
-        else:
-            launched = "(launched unknown)"
-
-        return f"{self.name} {launched}\n\tdays since epoch: {self.days_since_epoch:.2f}\n\ttags: {', '.join(self.tags)}"
+        from pprint import pformat
+        return pformat(self.to_dict)
 
     def add_tag(self, tag: str) -> None:
         """add an additional tag to the sat if it doesn't already exist
@@ -72,6 +334,10 @@ class Sat:
         return self._sat.name  # type: ignore
 
     @property
+    def id(self) -> int:
+        return self.norad_cat_id
+
+    @property
     def epoch(self):
         """returns the datetime when the satellite was last tracked
 
@@ -92,98 +358,13 @@ class Sat:
         """
         return ts.now() - self._sat.epoch
 
-    def ICRS_position_at(self, t: Time):
-        """Calculate propagated position of satellite in a geocentric ICRS reference frame
-
-        the ICRS reference frame has it's centre at the barycentre of the solar system and is primarily used for astronomy. more details are available at https://en.wikipedia.org/wiki/International_Celestial_Reference_System_and_its_realizations
-
-        for position (and/or velocity) in an ECEF (Earth Centered Earth Fixed) refernce frame, please use the `ITRS_cartesian_position_and_velocity_at()` method instead"""
-        return self._sat.at(t)
-
-    def ICRS_cartesian_position_and_veloicty_at(self, t: Time) -> tuple[float, float, float, float, float, float]:
-        """returns the veloicty and position of the satelite progated to the given time, relative to a ICRS reference frame where units are km or km/s respectively
-
-        Args:
-            t: time to propogate to
-
-        Returns:
-            x, y, z [km], x_v, y_v, z_v [km/s]
-        """
-        pos = self.ICRS_position_at(t)
-        x, y, z = pos.position.km  # type: ignore
-        x_v, y_v, z_v = pos.velocity.km_per_s  # type: ignore
-        return x, y, z, x_v, y_v, z_v
-
-    def ITRS_cartesian_position_and_velocity_at(self, t: Time) -> tuple[float, float, float, float, float, float]:
-        """returns the veloicty and position of the satellite progated to the given time, relative to the ITRS ECEF Geocentric reference frame where units are km or km/s respectively
-
-        Args:
-            t: time to propogate to
-
-        Returns:
-            x, y, z [km], x_v, y_v, z_v [km/s]
-        """
-        d, v = self.ICRS_position_at(t).frame_xyz_and_velocity(itrs)
-        x, y, z = d.km  # type: ignore
-        x_v, y_v, z_v = v.km_per_s  # type: ignore
-        return x, y, z, x_v, y_v, z_v
-
-    def projected_lat_lon_alt(self, t: Time = ts.now()) -> Tuple[float, float, float]:
-        """calculate the projected latitude and longitude onto the WGS84 centeroid and the altitude above the wgs84 centeroid.
-
-        This method will return bad data `(nan, nan, nan)` if the propogation is invalid. This can be checked with `math.isnan(lat)` etc.
-
-        Usage:
-            >>> t = ts.now()
-            >>> lat, lon, alt = projected_lat_lon_alt(t)
-
-        Args:
-            t: time. Defaults to ts.now().
-
-        Returns:
-            latitude [degrees],
-            longitude [degrees],
-            altitude [km]
-        """
-        pos = self.ICRS_position_at(t)
-        geo_pos = wgs84.geographic_position_of(pos)
-        lat = geo_pos.latitude.degrees
-        lon = geo_pos.longitude.degrees
-        alt = geo_pos.elevation.km
-
-        return lat, lon, alt  # type: ignore
-
-    def topocentric_position_at(self, observer: GeographicPosition, t=ts.now()):
-        """returns the sat position topocentric position relative to an observer on the Earth's surface (WGS84)"""
-        sat_from_topo = self._sat - observer
-        return sat_from_topo.at(t)
-
-    def topocentric_alt_azimuth_distance(self, observer: GeographicPosition, t: Time = ts.now()) -> Tuple[float, float, float]:
-        """calculate the altitude angle, azimuth angle and distance from the topocentric observer
-
-        Usage:
-            >>> observer = wgs84.latlon(53.46, -2.233)
-            >>> t = ts.now()
-            >>> altitude, azimuth, distance = topocentric_alt_azimuth_distance(observer, t)
-
-        Args:
-            observer: Topocentric observer
-            t: time. Defaults to ts.now().
-
-        Returns:
-            altitude [degrees],
-            azimuth [degrees],
-            distance [km]
-        """
-        pos = self.topocentric_position_at(observer, t)
-        alt, azimuth, distance = pos.altaz()
-        return alt.degrees, azimuth.degrees, distance.km  # type: ignore
-
     def __repr__(self) -> str:
         return f"<Sat {self.name} ({' - '.join(self.tags)})>"
 
     def generate_debris_tag(self) -> None:
         """generate a tag for this satellite if it is debris
+
+        Please note the NORAD dataset contains a negligible amount of debris
         """
         if "deb" in self.name.lower() or self.in_tags("deb"):
             self.add_tag("debris")
@@ -204,27 +385,35 @@ class Sat:
 
         # add additional tags if they exist
         if data['OBJECT_TYPE']:
-            self.add_tag(SATCAT.OBJECT_TYPE(data["OBJECT_TYPE"]))
+            self._object_type = SATCAT.OBJECT_TYPE(data["OBJECT_TYPE"])
+            self.add_tag(self._object_type)
 
         if data['OPS_STATUS_CODE']:
-            self.add_tag(SATCAT.OPERATIONAL_STATUS(data['OPS_STATUS_CODE']))
+            self._ops_status = SATCAT.OPERATIONAL_STATUS(
+                data["OPS_STATUS_CODE"])
+            self.add_tag(self._ops_status)
 
         if data['OWNER']:
-            self.add_tag(SATCAT.OPERATIONAL_STATUS(data['OWNER']))
+            self._owner = SATCAT.OWNER(data["OWNER"])
+            self.add_tag(self._owner)
 
         if data['LAUNCH_DATE']:
-            self.launch_date = datetime.strptime(
+            self._launch_date = datetime.strptime(
                 data['LAUNCH_DATE'], '%Y-%m-%d')
 
         if data['LAUNCH_SITE']:
-            self.add_tag(SATCAT.LAUNCH_SITE(data['LAUNCH_SITE']))
+            self._launch_site = SATCAT.LAUNCH_SITE(data["LAUNCH_SITE"])
+            self.add_tag(self._launch_site)
+
+            # generate launch country
+            self._launch_country = SATCAT.LAUNCH_COUNTRY(self._launch_site)
 
 
-class Sats:
+class SatelliteSet:
     """Container for multiple Sat objects with helpful methods for filtering, sorting and handling Sat data
     """
 
-    def __init__(self, sats: List[Sat]) -> None:
+    def __init__(self, sats: List[Satellite]) -> None:
         self._sats = sats
 
         # filter and analyse data
@@ -238,13 +427,16 @@ class Sats:
     def __len__(self) -> int:
         return len(self.sats)
 
-    def __add__(self, other: Self) -> Self:
-        return self.__class__(self._sats + other._sats)
+    def __add__(self, other: Self | list[Satellite]) -> Self:
+        if isinstance(other, SatelliteSet):
+            return self.__class__(self._sats + other._sats)
+        else:
+            return self.__class__(self._sats + other)
 
     def sort(self):
         self._sats.sort(key=lambda sat: sat.name)
 
-    def append(self, other: Sat):
+    def append(self, other: Satellite):
         self._sats.append(other)
 
     def add_tags_from_SATCAT(self, satcat) -> None:
@@ -255,17 +447,21 @@ class Sats:
     def remove_duplicates(self):
         """removes all duplicate sats after combining tags
         """
-        sats: Dict[str, Sat] = {}
+        sats: Dict[str, Satellite] = {}
         for sat in self.sats:
             if sat.name not in sats:
                 sats[sat.name] = sat
             else:
+                # preserve category
+                sats[sat.name].category = sats[sat.name].category if "special" not in sats[sat.name].category else sat.category
+
+                # combine tags
                 sats[sat.name].add_tags(sat.tags)
 
         self._sats = list(sats.values())
 
     @property
-    def sats(self) -> List[Sat]:
+    def sats(self) -> List[Satellite]:
         return self._sats
 
     def limit(self, n: int) -> Self:
@@ -279,7 +475,7 @@ class Sats:
         """
         return self.__class__(self.sats[:n])
 
-    def filter(self, fn: Callable[[Sat], bool]) -> Self:
+    def filter(self, fn: Callable[[Satellite], bool]) -> Self:
         """returns a new Sats object containing all sats for which fn(sat) is true
 
         Usage:
@@ -312,51 +508,19 @@ class Sats:
     def filter_no_debris(self) -> Self:
         return self.filter(lambda sat: not "debris" in sat.tags)
 
-    def print_all_tags(self) -> None:
-        tags = {}
-        # generate unique dict of all tags
-        for sat in self.sats:
-            for tag in sat.tags:
-                tags[tag] = True
-
-        tags = list(tags.keys())
-        tags.sort()
-
-        print("all tags:")
-        for tag in tags:
-            print(tag, end=", ")
-        print()
-
-    def print_all_tags_info(self) -> None:
+    def all_tags_dict(self) -> dict[str, int]:
+        """return a dictionary with all tags and the number of occorances"""
         tags = {}
         # generate unique dict of all tags
         for sat in self.sats:
             for tag in sat.tags:
                 tags[tag] = tags.get(tag, 0) + 1
 
-        print("occurances: tag")
-        for tag, occurances in tags.items():
-            print(f"{str(occurances).rjust(7)}: {tag}")
+        return tags
 
-
-class SatPosition:
-    """Represents a satellite at an instantaneous time and it's location within a model"""
-
-    def __init__(self, sat: Sat, x: int, y: int, *, altiude: float = -1, distance: float = -1):
-        self.sat = sat
-        self.x = x
-        self.y = y
-        self.altitude = altiude
-        self.distance = distance
-
-    def info(self) -> str:
-        addon = ""
-        if self.altitude != -1:
-            addon += f"\n\taltitude: {self.altitude:.0f}km"
-        if self.distance != -1:
-            addon += f"\n\tdistance from observer: {self.distance:.0f}km"
-
-        return f"{self.sat.info()}\n\tgrid position: ({self.x}, {self.y}){addon}\n"
+    def print_all_tags(self) -> None:
+        from pprint import pprint
+        pprint(self.all_tags_dict())
 
 
 class Orbit:
@@ -365,13 +529,16 @@ class Orbit:
 
         Args:
             name: name of orbit
-            alt: typical orbit altitude [km]
+            alt: typical orbit altitude[km]
         """
         self.name = name
         self.alt = alt
 
     def __repr__(self) -> str:
         return f"<Orbit {self.name} {self.alt}km>"
+
+    def to_dict(self) -> dict:
+        return {"name": self.name, "altitude [km]": self.alt}
 
 
 class Orbits:
@@ -385,3 +552,6 @@ class Orbits:
             Orbit("LEO", 2000),
             Orbit("GEO", 35768),
         ]
+
+    def to_dict(self) -> dict:
+        return {"orbits": [orbit.to_dict() for orbit in self.orbits]}

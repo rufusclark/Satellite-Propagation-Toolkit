@@ -4,8 +4,8 @@ from typing import Literal, Optional
 from skyfield.toposlib import GeographicPosition
 from skyfield.api import utc, wgs84
 from src import *
-from .projectionmodels import BaseProjectionModel
-from .models import Sat
+from .projection import BaseProjection
+from .models import Satellite
 import datetime
 import time
 import random
@@ -19,6 +19,7 @@ class ProgressBar:
     def __init__(self, tasks: int) -> None:
         self.tasks = tasks
         self.start_time = time.time()
+        self.update(0)
 
     def update(self, tasks_completed: int) -> None:
         percent = tasks_completed/self.tasks
@@ -48,25 +49,6 @@ def get_estimated_latlon() -> GeographicPosition:
     """
     import geocoder
     return wgs84.latlon(*geocoder.ip('me').latlng)
-
-
-def png_to_gif(png_path: str, gif_filename: str = "./images/out.gif", duration_ms: int = 1000):
-    # TODO: Proper support for generating GIF's
-    import imageio.v3 as iio
-    import numpy as np
-    from os import listdir
-    from os.path import isfile, join
-
-    filenames = ["" for _ in range(100)]
-    for f in listdir(png_path):
-        if isfile(join(png_path, f)):
-            filenames[int(f.strip(".png"))] = png_path + "/" + f
-
-    # save frames from images
-    frames = np.stack([iio.imread(filename) for filename in filenames])
-
-    # generate gif
-    iio.imwrite(gif_filename, frames, duration=duration_ms, loop=0)
 
 
 SUPPORTED_DEVICES = Literal[
@@ -162,8 +144,11 @@ def factory_reset_device(device: SUPPORTED_DEVICES, _generate_backup_images: boo
         # define matrix
         matrix = Matrix(width, height)
 
+        propagation_model = SGP4Propagation()
+        # define propagation model
+
         # define projection model
-        model = TopocentricProjectionModel.from_FoV(matrix, sats, obs, FoV)
+        propjection_model = TopocentricProjection.from_FoV(matrix, obs, FoV)
 
         # define propagation times
         propagation_times = [
@@ -172,7 +157,9 @@ def factory_reset_device(device: SUPPORTED_DEVICES, _generate_backup_images: boo
 
         # generate propagation data and send to device
         remote.generate_images_to_device(
-            model,
+            sats,
+            propagation_model,
+            propjection_model,
             modifiers,
             propagation_times,
             _backup=True
@@ -186,95 +173,3 @@ def factory_reset_device(device: SUPPORTED_DEVICES, _generate_backup_images: boo
         print("You can change views on your device by pressing the buttons on your device, see \n\thttps://github.com/rufusclark/Satellite-Propagation-Toolkit?tab=readme-ov-file#hardware-operations\nfor more details")
 
     print("Please reinsert your device to complete setup")
-
-
-def generate_video(
-    model: BaseProjectionModel,
-    modifiers: Modifiers,
-    start_time: datetime.datetime,
-    video_duration_secs: int,
-    propogation_duration_secs: int,
-    name: str = "projection_video",
-    *,
-    fps: int = 10,
-    _background_colour: Optional[RGB] = None,
-    _pixel_width_per_object: Optional[int] = None
-):
-    import cv2
-    # TODO: Multithread the image generation
-    # enforce tzinfo on the datetime
-    start_time = start_time.replace(tzinfo=utc)
-    vid_path = f"./images/video/{name}.mp4"
-    metadata_path = f"./images/video/{name}-metadata.txt"
-
-    total_frames = fps * video_duration_secs
-    frame_interval = propogation_duration_secs / total_frames
-
-    # create the temp directory
-    dir_path = pathlib.Path(
-        f"./images/temp/{''.join(random.choices(string.ascii_letters + string.digits, k=10))}")
-    dir_path.mkdir(parents=True, exist_ok=True)
-    print("Creating temporary working directory")
-
-    images: list[str] = []
-    sats: list[Sat] = []
-
-    # create all the images
-    print("Generating static images")
-    timer = ProgressBar(total_frames)
-    for i in range(total_frames):
-        # propogation time
-        t = ts.from_datetime(
-            start_time + datetime.timedelta(seconds=i * frame_interval))
-
-        # image file path
-        images.append(str(dir_path / f"{i:06}.png"))
-
-        # propogate, render and save image
-        f = model.generate_sat_frame(t).render(modifiers)
-        f.to_png(
-            images[-1],
-            _background_colour=_background_colour, _pixel_width_per_object=_pixel_width_per_object,
-            _print=False
-        )
-
-        # save metadata
-        for satPosition in f._sat_frame.sats:  # type:ignore
-            sat = satPosition.sat
-            if sat not in sats:
-                sats.append(sat)
-
-        timer.update(i+1)
-
-    # generate video
-    # get dimensions from the first frame
-    print("Generating video")
-    timer = ProgressBar(total_frames)
-    f_0 = cv2.imread(images[0])
-    height, width, _ = f_0.shape  # type:ignore
-
-    # video writer
-    # You can use 'XVID' or 'avc1' for compatibility
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # type:ignore
-    out = cv2.VideoWriter(vid_path, fourcc, fps, (width, height))
-
-    for i, img_name in enumerate(images):
-        frame = cv2.imread(img_name)
-        out.write(frame)  # type:ignore
-        timer.update(i+1)
-
-    out.release()
-    print(f"Video saved to {vid_path}")
-
-    # save the metadata to file
-    with open(metadata_path, "w") as f:
-        f.write(
-            f"Total Sats: {len(sats)}\nFPS: {fps}\nVideo duration: {video_duration_secs}s\nPropogation duration: {propogation_duration_secs}s\nStart time: {start_time}\n")
-        for sat in sats:
-            f.write(f"{sat.info()}\n")
-    print(f"Metadata saved to {metadata_path}")
-
-    # delete the temp directory
-    if dir_path.exists() and dir_path.is_dir():
-        shutil.rmtree(dir_path)
-    print("Deleted temporary working directory")

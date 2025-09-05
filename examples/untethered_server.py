@@ -12,8 +12,8 @@ you can set your location manually with:
 >>> observer = wgs84.latlon(lat, lon)
 """
 
-dt_start = datetime.datetime(2024, 8, 6, tzinfo=utc)
-duration = datetime.timedelta(minutes=1)
+dt_start = datetime.datetime.now(tz=utc)
+duration = datetime.timedelta(minutes=2)
 """
 define the start time of the generated images and the duration that the images should show.
 
@@ -64,7 +64,7 @@ For more information about how the modifiers work please see `analysis.py`.
 contextual keys for each of the defined `Modifiers` are provided by the `Modifiers.key()` method at the end of this function which explains how all of the above `Modifiers` objects work.
 """
 
-FoV = 50
+FoV = 90
 """
 set the field of view of the projection.
 
@@ -87,7 +87,10 @@ establish a connection to the Pico device using the `RemoteInterface` using seri
 this interface allows the Pico device's filesytem to be directly controlled over serial.
 """
 
-matrix = Matrix(*remote.get_display_dimensions())
+# !: Was this an issue where the hardware device was not flashed with the most recent hardware
+# TODO: Hardcode the width and height of the display instead
+# matrix = Matrix(*remote.get_display_dimensions())
+matrix = Matrix(16, 16)
 """
 define the pixel size of the matrix on the Pico device
 
@@ -96,7 +99,13 @@ this line retreives the dimensions of the device display from the device before 
 occasionally this line may result in the program halting or freezing. this can be resolved be reinserting the device and running the script again.
 """
 
-model = TopocentricProjectionModel.from_FoV(matrix, sats, obs, FoV)
+propagation_model = SGP4Propagation()
+"""
+define a propagation model to use
+
+this is the method used to calculate where the satellites are"""
+
+projection_model = TopocentricProjection.from_FoV(matrix, obs, FoV)
 """
 create the topocentric projection model combining the matrix, sats, observer and FoV.
 
@@ -116,7 +125,13 @@ please note the current client code on the Pico devices does not support differe
 please note this is a list of 'datetime.datetime' objects however most other methods throughout this project required a 'skyfield.Time' object instead and will otherwise throw an error. please type hints and docstrings for specific method arguments.
 """
 
-remote.generate_images_to_device(model, modifiers, propagation_times)
+remote.generate_images_to_device(
+    sats,
+    propagation_model,
+    projection_model,
+    modifiers,
+    propagation_times
+)
 """
 `RemoteInterface` method that obfiscates the usual propagation, rendering and transfer proccess to send new images to Pico device.
 
@@ -129,7 +144,7 @@ this method also prints contextual performance data to provide an estimated prog
 it is not recommended to change the _ (underscore) arguments of this method as they may lead to unexpected side effects.
 """
 
-print(model.info(), end="")
+print(projection_model.info(), end="")
 """
 print contextual information about the model that has been generated including the matrix dimensions, FoV, origin, projection method, and angles per cell.
 """

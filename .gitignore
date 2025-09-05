@@ -18,6 +18,11 @@ data/
 images/*
 !images/md/
 
+# Whitelist MOCAT data
+!data/
+data/*
+!data/MOCAT/
+
 # Dev files
 dev_*.py
 

@@ -2,7 +2,7 @@
 
 The satellite propagation toolkit is designed to generate 2D projection images and data of trackable objects orbiting Earth using real satellite tracking data from CelesTrak and accurate propagation using the SGP4 model.
 
-The project can generate images based on the tracking data of satellites and satellite tags from the NORAD and SATCAT CelesTrak datasets using either a Topocentric or Geocentric projection above a given location on the Earth's surface.
+The project can generate images, videos, gifs and reports based on the tracking data of satellites and satellite tags from the NORAD and SATCAT CelesTrak datasets using either a Topocentric or Geocentric projection above a given location on the Earth's surface. This project also expense the underlying data along with a suite of tools to filter, analyse and display this data.
 
 The project is suitable for everyone from novices with little to no programming experience who want to show what satellites they can see, to experts looking to analyse the satellite orbits, create outreach activities or highlight key space trends.
 
@@ -12,7 +12,7 @@ The project is suitable for everyone from novices with little to no programming 
 * [Setup](#setup)
 * [About the tool](#about-the-tool)
 * [Testing](#testing)
-* [Generating standalone images and videos](#generating-standalone-images)
+* [Using the manager](#using-the-manager)
 * [Outreach recommendations](#outreach-recommendations)
 * [Hardware operations](#hardware-operations)
 * [Sample analysis](#sample-analysis)
@@ -25,8 +25,11 @@ The core features of the project are:
 
 * Automatically downloads, caches and updates satellite tracking data and metadata from [CelesTrak](https://celestrak.org/)
 * Propagating tracked objects using the industry standard SPG4 model
-* Generating 2D data frames containing Topocentric or Geocentric projections of tracked objects over a given position
-* Generating images and videos from tracking data based on custom analysis of metadata and satellite tags
+* Generating images, video and gifs from a user's perspective
+* Analyse objects based on metadata and properties
+* Creat custom outputs showcasing your data
+* Generate reports summerising an orbital projection
+* Estimate a realistic future space enviroment based on the [MOCAT tool](https://github.com/ARCLab-MIT/MOCAT-SSEM)
 * Displaying generated images on [supported devices](#hardware-operations) whilst tethered to a PC or standalone
 
 ![500deg Topocentric Projection about 0N, 0E](images/md/0,0%20TOPO%20500deg%20400x400.png)
@@ -47,7 +50,7 @@ This project requires that you already have the following software installed on 
 * python3.9+
 * pip
 
-If you do not meet these requirements, please see this tutorial for installing them, ![Installation Guide](https://www.python.org/about/gettingstarted/)
+If you do not meet these requirements, please see this tutorial for installing them, [Installation Guide](https://www.python.org/about/gettingstarted/)
 
 ### Downloading
 
@@ -77,19 +80,41 @@ python3 ./examples/quickstart.py
 
 ## About the tool
 
-This tool works in several discrete steps allowing each part to be reused or extended. The program flow for generating an image works as follows:
+This tool can work in 2 methods:
+
+1. using the manager to generate outputs without complexity
+2. finer control and access to internal working through discrete logical steps
+
+Internally the tool works in the following discrete steps when generating an image (other outputs take slightly different paths)
 
 1. Load satellite data (or download if not cached or expired)
-2. Define and set your matrix size and projection
-3. Propogate the satellites and position them on a grid of defined size
-4. Render the satellite positions using pre-defined modifiers to create images
-5. Save the image
+2. Define a propagation method
+3. Propagate the satellites to new positions
+4. Define a projection method
+5. Project the positions to a 2D plane
+6. Define some Modifiers (which describe how to render the 2D plane)
+7. Render the image
+8. Save the image
+
+> The position output from propagation is particularily useful for exposing orbital parameters and metadata for analysis and visualisation
 
 ### Data and Propagation
 
 All data used by this tool is downloaded from public API's at [CelesTrak](https://celestrak.org/). This site also includes lots of detail about how the data is generated and what it means.
 
 This data is then used with the industry standard [SGP4 model](https://en.wikipedia.org/wiki/Simplified_perturbations_models) to calculate the location of the satellites.
+
+Future orbital capacity data is provided via the [MOCAT tool](https://github.com/ARCLab-MIT/MOCAT-SSEM) from MIT. This can be toggled on and off as seen in [quickstart script](examples/quickstart.py).
+
+### Propagation Modes
+
+This tool ships with several propagation modes:
+
+1. SGP4 Propagation (Default and Recommended)
+2. Keplerian Propagation (Limited Support)
+3. Cubic Interpolation (Limited Support)
+
+> SGP4 is recommended for all usercases unless you're using a manager method with a different default option. The other propagation methods have several caviats as documented within the code.
 
 ### Projection Modes
 
@@ -106,69 +131,11 @@ This tool supports 2 projection modes:
 
 ## Testing
 
-The accuracy of the propagations and the generated images have been verified against reliable 3rd party sources and proof-checked by those with a relevant university-level understanding of orbit mechanics.
+The accuracy of the SGP4 propagation and the generated images have been verified against reliable 3rd party sources and proof-checked by those with a relevant university-level understanding of orbit mechanics.
 
-## Generating standalone images and videos
+## Using the manager
 
-This project supports generating standalone images, please see [Generating an image](#generating-an-image) for instructions and examples of generating images.
-
-Once you've craeted your `ImageFrame` object (represents a rendered image) you can call the following methods to receive printable data about the image. The following examples is from within the Python interactive environment `python -i ./examples/quickstart.py`:
-
-```python
-...
->>> print(image_frame.key())
-Key
-  red (+255)green (+255)blue (+255) always
->>>
->>>
->>> print(image_frame.key_with_analysis())
-Key (total sats = 106)
-  red (+255)green (+255)blue (+255) always (sats = 106)
->>>
->>>
->>> print(image_frame.info())
-Key (total sats = 106)
-  red (+255)green (+255)blue (+255) always (sats = 106)
-Sat Frame (sats: 106)
-  propagation time: 2024-08-09 22:38:58
-  matrix size: (128 x 128)
-Topocentric Projection
-  observer: 52.40°N, 0.73°W
-  cell width: 0.75°N/S, 0.75°E/W
-  minimum FoV: 95.75°
-  equivalent FoV: 120.00°
-
-ARKTIKA-M 2  (launched 2023-12-16, 237 days ago)
-  days since epoch: 6.61
-  tags: weather, weather & earth resources, active, special-interest, payload, operational, tyuratam missile and space center, kazakhstan(also known as baikonur cosmodrome)
-  grid position: (79, 73)
-  altitude: 33260km
-  distance from observer: 33405km
-BEIDOU-2 M1  (launched 2007-04-13, 6328 days ago)
-  days since epoch: 5.24
-  tags: satnogs, communications, payload, nonoperational, xichang launch facility, prc
-  grid position: (5, 82)
-  altitude: 22467km
-  distance from observer: 24034km
-...
-```
-
-For more adavanced analysis this can be used to categorise the number of different satellites in a given projeciton. The key methods are available without rendering an Image using the `Modifiers.key_with_analysis(sat_frame)` method.
-
-Videos can be generated via the `generate_video() function`:
-```python
-generate_video(
-    model=model,
-    modifiers=modifiers,
-    start_time=datetime(2025, 7, 17, 13, 0),
-    video_duration_secs=120,
-    propogation_duration_secs=3600,
-    fps=10,
-    name="Quickstart_video",
-    _pixel_width_per_object=5)
-```
-
-> Please note the size of satellite dots can be increased using the `_pixel_width_per_object` parameter
+Instructions for using the manager to generate images, videos, gifs and reports are available within [quickstart_manager.py](/examples/quickstart_manager.py) with documentation.
 
 ## Outreach recommendations
 

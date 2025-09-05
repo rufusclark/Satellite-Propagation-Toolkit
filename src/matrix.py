@@ -7,72 +7,116 @@ from .rgb import RGB, BLACK
 from .models import ts
 from .analysis import Modifiers
 if TYPE_CHECKING:
-    from .projectionmodels import SatFrame
+    from .projection import SatFrame, BaseProjection, FramePosition
+    from .propagation import OrbitalPosition
+
+# TODO: Support adding ImageFrames together (and all child objects)
 
 
 class ImageFrame:
     """MatrixFrame about origin (top left) with conventional cartesian coordinates
+
+    do not create direction. Create by calling .render on a SatFrame
     """
 
-    def __init__(self, matrix: "Matrix", time: Time, *, _sat_frame: "SatFrame | None" = None, _modifiers: Modifiers | None = None) -> None:
-        """generate an empty frame from a matrix with a given time.
+    def __init__(self, sat_frame: "SatFrame", modifiers: Modifiers, *, render: bool = True) -> None:
+        """create a new ImageFrame from a SatFrame and modifiers
 
         Args:
-            matrix: Matrix
-            time: skyfield Time object
+            sat_frame: SatFrame
+            modifiers: Modifiers
         """
-        self._matrix = matrix
-        self.time = time
-        self._pixels: list[RGB] = [RGB() for _ in range(len(matrix))]
+        # link objects
+        self._sat_frame = sat_frame
+        self._modifiers = modifiers
 
-        # contain data about progation, sats and model
-        self._sat_frame = _sat_frame
-        self._modifiers = _modifiers
+        # setup pixels
+        self._pixels: list[RGB] = [RGB() for _ in range(len(self.matrix))]
 
-    def key(self) -> str:
-        """return image key for ImageFrame
+        # render
+        if render:
+            for position in self.sat_frame.frame_positions:
+                rgb = self.get_pixel(position.x_idx, position.y_idx)
+                for modifier in modifiers.modifiers:
+                    rgb = modifier.handle(position, rgb)
+                self.set_pixel(position.x_idx, position.y_idx, rgb)
 
-        this requires that this object was rendered from a SatFrame object"""
-        if self._modifiers:
-            return self._modifiers.key()
-        raise UserWarning(
-            "this method is only valid for ImageFrame objects rendered from SatFrames")
+    @property
+    def frame_positions(self) -> list["FramePosition"]:
+        return self._sat_frame.frame_positions
 
-    def key_with_analysis(self) -> str:
-        """return image key for ImageFrame with the number of sats per category
+    @property
+    def orbital_positions(self) -> list["OrbitalPosition"]:
+        return [frame_position.orbital_position for frame_position in self.frame_positions]
 
-        this requires that this object was rendered from a SatFrame object"""
-        if self._modifiers and self._sat_frame:
-            return self._modifiers.key_with_analysis(self._sat_frame)
-        raise UserWarning(
-            "this method is only valid for ImageFrame objects rendered from SatFrames")
+    @property
+    def matrix(self) -> "Matrix":
+        return self._sat_frame._model._matrix
+
+    @property
+    def modifiers(self) -> Modifiers:
+        return self._modifiers
+
+    @property
+    def projection_model(self) -> "BaseProjection":
+        return self._sat_frame._model
+
+    @property
+    def sat_frame(self) -> "SatFrame":
+        return self._sat_frame
+
+    def key_to_dict(self) -> dict:
+        return {
+            "image frame modifiers": self.modifiers.key_with_analysis_to_dict(self.sat_frame)
+        }
+
+    def to_dict(self) -> dict:
+        return {
+            "image frame modifiers": self.modifiers.key_with_analysis_to_dict(self.sat_frame),
+            **self.sat_frame.to_dict()
+        }
+
+    def key_info(self) -> str:
+        from pprint import pformat
+        return pformat(self.key_to_dict())
 
     def info(self) -> str:
-        """return info about the ImageFrame including model, matrix and sats
+        from pprint import pformat
+        return pformat(self.to_dict())
 
-        this requires that this object was rendered from a SatFrame object"""
-        return self.key_with_analysis() + "\n" + self._sat_frame.info()  # type: ignore
+    # !
+    # ! Old code beloww
+    # !
 
-    @property
-    def unix_timestamp(self) -> float:
-        """unix timestamp of frame in seconds including microseconds
+    # def key(self) -> str:
+    #     # TODO: Reimplement
+    #     """return image key for ImageFrame
 
-        Returns:
-            float seconds since epoch
-        """
-        return self.time.utc_datetime().timestamp()  # type: ignore
+    #     this requires that this object was rendered from a SatFrame object"""
+    #     if self._modifiers:
+    #         return self._modifiers.key()
+    #     raise UserWarning(
+    #         "this method is only valid for ImageFrame objects rendered from SatFrames")
 
-    @property
-    def unix_timestamp_seconds(self) -> int:
-        """unix timestamp of frame in seconds - no microseconds
+    # def key_with_analysis(self) -> str:
+    #     # TODO: Reimplement
+    #     """return image key for ImageFrame with the number of sats per category
 
-        Returns:
-            integer seconds since epoch
-        """
-        return int(self.unix_timestamp)
+    #     this requires that this object was rendered from a SatFrame object"""
+    #     if self._modifiers and self._sat_frame:
+    #         return self._modifiers.key_with_analysis(self._sat_frame)
+    #     raise UserWarning(
+    #         "this method is only valid for ImageFrame objects rendered from SatFrames")
+
+    # def info(self) -> str:
+    #     # TODO: Reimplement
+    #     """return info about the ImageFrame including model, matrix and sats
+
+    #     this requires that this object was rendered from a SatFrame object"""
+    #     return self.key_with_analysis() + "\n" + self._sat_frame.info()  # type: ignore
 
     def _idx(self, x: int, y: int) -> int:
-        return (y * self._matrix.width) + x
+        return (y * self.matrix.width) + x
 
     def set_pixel(self, x: int, y: int, rgb: RGB) -> None:
         self._pixels[self._idx(x, y)] = rgb
@@ -81,11 +125,11 @@ class ImageFrame:
         return self._pixels[self._idx(x, y)]
 
     def idx_is_valid(self, x: int, y: int) -> bool:
-        return (x >= 0 and x < self._matrix.width) and (y >= 0 and y < self._matrix.height)
+        return (x >= 0 and x < self.matrix.width) and (y >= 0 and y < self.matrix.height)
 
     def _for_grid(self, fn) -> None:
-        for y in range(self._matrix.height):
-            for x in range(self._matrix.width):
+        for y in range(self.matrix.height):
+            for x in range(self.matrix.width):
                 fn(x, y)
 
     def _print_grid(self, fn) -> None:
@@ -104,8 +148,8 @@ class ImageFrame:
         Args:
             fn: function to print output
         """
-        for y in range(self._matrix.height):
-            for x in range(self._matrix.width):
+        for y in range(self.matrix.height):
+            for x in range(self.matrix.width):
                 print(fn(x, y), end=", ")
             print()
 
@@ -116,7 +160,7 @@ class ImageFrame:
         self._print_grid(lambda x, y: f"{x, y}")
 
     def __repr__(self) -> str:
-        return f"<MatrixFrame t={self.time} {self._matrix}>"
+        return f"<ImageFrame t={self.sat_frame.time} {self.matrix}>"
 
     def to_png(self, filename: str = "image.png", *, _print: bool = True, _create_path: bool = True, _background_colour: Optional[RGB] = None, _pixel_width_per_object: Optional[int] = None) -> None:
         """saves the ImageFrame object as a png file
@@ -139,15 +183,10 @@ class ImageFrame:
         pixels = []
 
         # support more than one pixel per object (Optional)
-        # TODO: Generate a new ImageFrame from the old image frame with multiple pixels per object
         if _pixel_width_per_object:
             # generate new empty ImageFrame
             new_frame = ImageFrame(
-                matrix=self._matrix,
-                time=self.time,
-                _sat_frame=self._sat_frame,
-                _modifiers=self._modifiers
-            )
+                self.sat_frame, self._modifiers, render=False)
 
             # populate the ImageFrame
             n = _pixel_width_per_object//2
@@ -175,9 +214,9 @@ class ImageFrame:
             self._for_grid(background_colour)
 
         # convert internal matrix to png
-        for y in range(self._matrix.height):
+        for y in range(self.matrix.height):
             row = []
-            for x in range(self._matrix.width):
+            for x in range(self.matrix.width):
                 row.extend(self.get_pixel(x, y).to_tuple())
             pixels.append(row)
 
@@ -203,40 +242,8 @@ class Matrix:
     def info(self) -> str:
         return f"matrix size: ({self.width} x {self.height})"
 
-    def _empty_frame(self) -> ImageFrame:
-        """create an empty frame from the matrix
-
-        Returns:
-            Frame
-        """
-        return ImageFrame(self, Time(ts, 0))
-
     def __len__(self) -> int:
         return self.width * self.height
 
-    @property
-    def path(self) -> str:
-        return self._path
-
-    @path.setter
-    def path(self, path) -> None:
-        import os
-
-        # create directory if not exists
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        self._path = path
-
     def __repr__(self) -> str:
         return f"<Matrix (w={self.width}, h={self.height})"
-
-
-if __name__ == "__main__":
-    from skyfield.api import load
-    ts = load.timescale()
-
-    m = Matrix(4, 4)
-    f = ImageFrame(m, ts.now())
-
-    print(f)

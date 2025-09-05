@@ -3,13 +3,14 @@ from typing import List, Dict
 
 import os
 import requests
+import functools
 import pickle
 from csv import DictReader
 from bs4 import BeautifulSoup
 
 from skyfield.api import load
 
-from .models import Sat, Sats
+from .models import Satellite, SatelliteSet
 
 
 class NORADSource:
@@ -156,7 +157,7 @@ class NORAD:
             except Exception as e:
                 print(e)
 
-    def load_sats(self, sources: List[NORADSource]) -> Sats:
+    def load_sats(self, sources: List[NORADSource]) -> SatelliteSet:
         # load specified sources
         sats = []
 
@@ -165,16 +166,19 @@ class NORAD:
             with load.open(filepath, mode="r") as f:
                 data = list(DictReader(f))
 
-                sats.extend([Sat(fields, source.group, source.category)
-                            for fields in data])
-                print(f"Loaded {source.group} NORAD data sources {' '*40}",
-                      end="\r")
+                sats.extend([Satellite.from_tle(
+                    fields, source.group, source.category
+                ) for fields in data])
+                print(
+                    f"Loaded {source.group} NORAD data sources {' '*40}",
+                    end="\r"
+                )
 
         print(f"Loaded all {len(sources)} NORAD data sources {' '*40}")
 
-        return Sats(sats)
+        return SatelliteSet(sats)
 
-    def load_all_sats(self) -> Sats:
+    def load_all_sats(self) -> SatelliteSet:
         # load sats all sats
         return self.load_sats(self.sources)
 
@@ -289,7 +293,17 @@ class SATCAT:
             Human readable launch site
         """
         lookup_table = {
-            "AFETR": "Air Force Eastern Test Range, Florida, USA", "AFWTR": "Air Force Western Test Range, California, USA", "CAS": "Canaries Airspace", "DLS": "Dombarovskiy Launch Site, Russia", "ERAS": "Eastern Range Airspace", "FRGUI": "Europe's Spaceport, Kourou, French Guiana", "HGSTR": "Hammaguira Space Track Range, Algeria", "JJSLA": "Jeju Island Sea Launch Area, Republic of Korea", "JSC": "Jiuquan Space Center, PRC", "KODAK": "Kodiak Launch Complex, Alaska, USA", "KSCUT": "Uchinoura Space Center(Fomerly Kagoshima Space Center—University of Tokyo, Japan)", "KWAJ": "US Army Kwajalein Atoll (USAKA)", "KYMSC": "Kapustin Yar Missile and Space Complex, Russia", "NSC": "Naro Space Complex, Republic of Korea", "PLMSC": "Plesetsk Missile and Space Complex, Russia", "RLLB": "Rocket Lab Launch Base, Mahia Peninsula, New Zealand", "SCSLA": "South China Sea Launch Area, PRC", "SEAL": "Sea Launch Platform (mobile)", "SEMLS": "Semnan Satellite Launch Site, Iran", "SMTS": "Shahrud Missile Test Site, Iran", "SNMLP": "San Marco Launch Platform, Indian Ocean (Kenya)", "SPKII": "Space Port Kii, Japan", "SRILR": "Satish Dhawan Space Centre, India(Formerly Sriharikota Launching Range)", "SUBL": "Submarine Launch Platform (mobile)", "SVOBO": "Svobodnyy Launch Complex, Russia", "TAISC": "Taiyuan Space Center, PRC", "TANSC": "Tanegashima Space Center, Japan", "TYMSC": "Tyuratam Missile and Space Center, Kazakhstan(Also known as Baikonur Cosmodrome)", "UNK": "Unknown", "VOSTO": "Vostochny Cosmodrome, Russia", "WLPIS": "Wallops Island, Virginia, USA", "WOMRA": "Woomera, Australia", "WRAS": "Western Range Airspace", "WSC": "Wenchang Satellite Launch Site, PRC", "XICLF": "Xichang Launch Facility, PRC", "YAVNE": "Yavne Launch Facility, Israel", "YSLA": "Yellow Sea Launch Area, PRC", "YUN": "Yunsong Launch Site(Sohae Satellite Launching Station),Democratic People's Republic of Korea (North Korea)"
+            "AFETR": "Air Force Eastern Test Range, Florida, USA", "AFWTR": "Air Force Western Test Range, California, USA", "CAS": "Canaries Airspace", "DLS": "Dombarovskiy Launch Site, Russia", "ERAS": "Eastern Range Airspace", "FRGUI": "Europe's Spaceport, Kourou, French Guiana", "HGSTR": "Hammaguira Space Track Range, Algeria", "JJSLA": "Jeju Island Sea Launch Area, Republic of Korea", "JSC": "Jiuquan Space Center, PRC", "KODAK": "Kodiak Launch Complex, Alaska, USA", "KSCUT": "Uchinoura Space Center(Fomerly Kagoshima Space Center—University of Tokyo, Japan)", "KWAJ": "US Army Kwajalein Atoll (USAKA)", "KYMSC": "Kapustin Yar Missile and Space Complex, Russia", "NSC": "Naro Space Complex, Republic of Korea", "PLMSC": "Plesetsk Missile and Space Complex, Russia", "RLLB": "Rocket Lab Launch Base, Mahia Peninsula, New Zealand", "SCSLA": "South China Sea Launch Area, PRC", "SEAL": "Sea Launch Platform (mobile)", "SEMLS": "Semnan Satellite Launch Site, Iran", "SMTS": "Shahrud Missile Test Site, Iran", "SNMLP": "San Marco Launch Platform, Indian Ocean (Kenya)", "SPKII": "Space Port Kii, Japan", "SRILR": "Satish Dhawan Space Centre, India(Formerly Sriharikota Launching Range)", "SUBL": "Submarine Launch Platform (mobile)", "SVOBO": "Svobodnyy Launch Complex, Russia", "TAISC": "Taiyuan Space Center, PRC", "TANSC": "Tanegashima Space Center, Japan", "TYMSC": "Tyuratam Missile and Space Center, Kazakhstan (Also known as Baikonur Cosmodrome)", "UNK": "Unknown", "VOSTO": "Vostochny Cosmodrome, Russia", "WLPIS": "Wallops Island, Virginia, USA", "WOMRA": "Woomera, Australia", "WRAS": "Western Range Airspace", "WSC": "Wenchang Satellite Launch Site, PRC", "XICLF": "Xichang Launch Facility, PRC", "YAVNE": "Yavne Launch Facility, Israel", "YSLA": "Yellow Sea Launch Area, PRC", "YUN": "Yunsong Launch Site (Sohae Satellite Launching Station), Democratic People's Republic of Korea (North Korea)"
+        }
+        if launch_site in lookup_table:
+            return lookup_table[launch_site]
+        return ""
+
+    @classmethod
+    def LAUNCH_COUNTRY(cls, launch_site: str) -> str:
+        """returns the launch country when given the launch_site (output of `cls.LAUNCH_SITE()`)"""
+        lookup_table = {
+            'Air Force Eastern Test Range, Florida, USA': 'USA', 'Air Force Western Test Range, California, USA': 'USA', 'Canaries Airspace': 'Canaries Airspace', 'Dombarovskiy Launch Site, Russia': 'Russia', 'Eastern Range Airspace': 'USA', "Europe's Spaceport, Kourou, French Guiana": 'French Guiana', 'Hammaguira Space Track Range, Algeria': 'Algeria', 'Jeju Island Sea Launch Area, Republic of Korea': 'Republic of Korea', 'Jiuquan Space Center, PRC': 'PRC', 'Kodiak Launch Complex, Alaska, USA': 'USA', 'Uchinoura Space Center(Fomerly Kagoshima Space Center—University of Tokyo, Japan)': 'Japan)', 'US Army Kwajalein Atoll (USAKA)': 'USA', 'Kapustin Yar Missile and Space Complex, Russia': 'Russia', 'Naro Space Complex, Republic of Korea': 'Republic of Korea', 'Plesetsk Missile and Space Complex, Russia': 'Russia', 'Rocket Lab Launch Base, Mahia Peninsula, New Zealand': 'New Zealand', 'South China Sea Launch Area, PRC': 'PRC', 'Sea Launch Platform (mobile)': 'Sea Launch Platform (mobile)', 'Semnan Satellite Launch Site, Iran': 'Iran', 'Shahrud Missile Test Site, Iran': 'Iran', 'San Marco Launch Platform, Indian Ocean (Kenya)': 'Kenya', 'Space Port Kii, Japan': 'Japan', 'Satish Dhawan Space Centre, India(Formerly Sriharikota Launching Range)': 'India', 'Submarine Launch Platform (mobile)': 'Sea Launch Platform (mobile)', 'Svobodnyy Launch Complex, Russia': 'Russia', 'Taiyuan Space Center, PRC': 'PRC', 'Tanegashima Space Center, Japan': 'Japan', 'Tyuratam Missile and Space Center, Kazakhstan (Also known as Baikonur Cosmodrome)': 'Kazakhstan', 'Unknown': 'Unknown', 'Vostochny Cosmodrome, Russia': 'Russia', 'Wallops Island, Virginia, USA': 'USA', 'Woomera, Australia': 'Australia', 'Western Range Airspace': 'USA', 'Wenchang Satellite Launch Site, PRC': 'PRC', 'Xichang Launch Facility, PRC': 'PRC', 'Yavne Launch Facility, Israel': 'Israel', 'Yellow Sea Launch Area, PRC': 'PRC', "Yunsong Launch Site (Sohae Satellite Launching Station), Democratic People's Republic of Korea (North Korea)": " Democratic People's Republic of Korea (North Korea)"
         }
         if launch_site in lookup_table:
             return lookup_table[launch_site]
@@ -314,12 +328,15 @@ class SATCAT:
         return ""
 
 
-def init_sats() -> Sats:
+@functools.lru_cache(1)
+def init_sats() -> SatelliteSet:
     """load and sats, update data from CelesTrak (NORAD) and add metadata from SATCAT
 
     Note this function also removes all sats with data older than 14 days as they will give inaccurate propogation data.
 
     Greater control is available my calling the methods individually
+
+    The result of this function is cached. This shouldn't present an issue for scripting. If this is expected to run continously, please restart it every 24 hours to keep the data fresh
 
     Returns:
         Sats object containing all objects

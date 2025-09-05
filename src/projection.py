@@ -6,11 +6,46 @@ import math
 from skyfield.toposlib import GeographicPosition
 from skyfield.timelib import Time
 
-from .models import Sats, SatPosition
+from .models import SatelliteSet, Satellite
 from .matrix import Matrix, ImageFrame
 from .analysis import BasePixelModifier, Modifiers
+from .propagation import OrbitalPosition
 
 EARTH_RADIUS = 6371  # [km] mean radius
+
+
+class FramePosition:
+    """Represents a satellite at an instantaneous time and it's location within an intantaneous 2D frame"""
+
+    def __init__(self, orbital_position: OrbitalPosition, x: float, y: float) -> None:
+        self.orbital_position = orbital_position
+        self.x = x
+        self.y = y
+
+    @property
+    def sat(self) -> Satellite:
+        return self.orbital_position.sat
+
+    @property
+    def x_idx(self) -> int:
+        return int(self.x)
+
+    @property
+    def y_idx(self) -> int:
+        return int(self.y)
+
+    def to_dict(self) -> dict:
+        out = self.orbital_position.to_dict()
+        out["frame position"] = {
+            "time": self.orbital_position.time.utc_iso(),
+            "x": self.x,
+            "y": self.y
+        }
+        return out
+
+    def info(self) -> str:
+        from pprint import pformat
+        return pformat(self.to_dict())
 
 
 class SatFrame:
@@ -21,17 +56,34 @@ class SatFrame:
     sat frames can be used for analysis in place or for generating ImageFrame using the `render` method
     """
 
-    def __init__(self, model: "BaseProjectionModel", time: Time, sats: list[SatPosition] = []) -> None:
-        self.model = model
-        self._sats = sats
-        self.time = time
+    def __init__(self, model: "BaseProjection") -> None:
+        self._model = model
+        self._frame_positions: list[FramePosition] = []
 
     @property
-    def sats(self) -> list[SatPosition]:
-        return self._sats
+    def frame_positions(self) -> list[FramePosition]:
+        return self._frame_positions
 
-    def add_sat(self, sat: SatPosition) -> None:
-        self._sats.append(sat)
+    def add_frame_position(self, frame_position: FramePosition) -> None:
+        self._frame_positions.append(frame_position)
+
+    @property
+    def model(self) -> "BaseProjection":
+        return self._model
+
+    @property
+    def matrix(self) -> Matrix:
+        return self._model._matrix
+
+    @property
+    def time(self) -> Time:
+        """returns the time [skyfield Time object] for the first satellite position frame.
+
+        This does not account for FramePositions with different times within the same SatFrame"""
+        if not self.frame_positions:
+            raise Warning(
+                "No satellites within the SatFrame so no times is returned")
+        return self._frame_positions[0].orbital_position.time
 
     @property
     def unix_timestamp(self) -> float:
@@ -54,7 +106,7 @@ class SatFrame:
     @property
     def cells(self) -> int:
         """number of cells"""
-        return len(self.model._matrix)
+        return len(self._model._matrix)
 
     @property
     def density(self) -> float:
@@ -63,7 +115,25 @@ class SatFrame:
 
     @property
     def number_of_sats(self) -> int:
-        return len(self._sats)
+        return len(self._frame_positions)
+
+    def details_to_dict(self) -> dict:
+        return {
+            "time": self.time.utc_iso(),
+            "width": self.matrix.width,
+            "height": self.matrix.height,
+            "density [sats/cell]": self.density,
+            "number of sats": self.number_of_sats
+        }
+
+    def to_dict(self) -> dict:
+        out = {
+            "projection model": self.model.to_dict(),
+            "satellite frame": self.details_to_dict(),
+            "satellites": [frame_position.to_dict()
+                           for frame_position in self.frame_positions]
+        }
+        return out
 
     def info(self) -> str:
         """outputs useful information about the SatFrame and the sat's within it
@@ -71,7 +141,8 @@ class SatFrame:
         Returns:
             str information output
         """
-        return f"Sat Frame (sats: {self.number_of_sats})\n\tpropagation time: {self.time.utc_strftime('%Y-%m-%d %H:%M:%S')}\n\t{self.model._matrix.info()}\n{self.model.info()}\n{''.join([sat.info() for sat in self.sats])}"
+        from pprint import pformat
+        return pformat(self.to_dict())
 
     def render(self, modifiers: Modifiers) -> ImageFrame:
         """render a new ImageFrame object from this object based on the sats in this frame and their tags and other data
@@ -82,23 +153,14 @@ class SatFrame:
         Returns:
             New ImageFrame object
         """
-        # create new image frame
-        frame = ImageFrame(self.model._matrix, self.time,
-                           _sat_frame=self, _modifiers=modifiers)
-
-        # render frame
-        for sat in self.sats:
-            rgb = frame.get_pixel(sat.x, sat.y)
-            for modifier in modifiers.modifiers:
-                rgb = modifier.handle(sat, rgb)
-            frame.set_pixel(sat.x, sat.y, rgb)
-        return frame
+        return ImageFrame(self, modifiers)
 
 
-class BaseProjectionModel:
+class BaseProjection:
+    # ! These objects (and children) should be stateless except for configuration variables
     name: str
 
-    def __init__(self, matrix: Matrix, sats: Sats, observer: GeographicPosition, x_width: float = 0.5, y_width: float = 0.5) -> None:
+    def __init__(self, matrix: Matrix, observer: GeographicPosition, x_width: float = 0.5, y_width: float = 0.5) -> None:
         """create a new projection model
 
         please note models can also be created using the `from_FoV` method instead of using the x_width and y_width
@@ -111,13 +173,12 @@ class BaseProjectionModel:
             y_width: cell height [degrees per cell]. Defaults to 0.5.
         """
         self._matrix = matrix
-        self._sats = sats
         self.origin = observer
         self.x_width = x_width
         self.y_width = y_width
 
     @classmethod
-    def from_FoV(cls, matrix: Matrix, sats: Sats, observer: GeographicPosition, FoV: float) -> Self:
+    def from_FoV(cls, matrix: Matrix, observer: GeographicPosition, FoV: float) -> Self:
         """create a new projection model
 
         Args:
@@ -126,17 +187,28 @@ class BaseProjectionModel:
             observer: GeographicPosition of the observer. note the origin may differ depending on type of model.
             FoV: FoV of the observer in degrees
         """
-        return cls(matrix, sats, observer, *cls._cell_width_and_height_from_FoV(matrix, FoV))
+        return cls(matrix, observer, *cls._cell_width_and_height_from_FoV(matrix, FoV))
+
+    def project(self, orbital_positions: OrbitalPosition | list[OrbitalPosition]) -> SatFrame:
+        """projects the orbital_positions onto a 2D plane based on the Projection Model and it's configurations
+        """
+        if isinstance(orbital_positions, OrbitalPosition):
+            orbital_positions = [orbital_positions]
+        return self._project(orbital_positions)
+
+    def _project(self, orbital_positions: list[OrbitalPosition]) -> SatFrame:
+        raise NotImplementedError()
 
     @classmethod
     def _cell_width_and_height_from_FoV(cls, matrix: Matrix, FoV: float) -> tuple[float, float]:
         raise NotImplementedError()
 
-    def generate_sat_frame(self, t: Time) -> SatFrame:
+    def to_dict(self) -> dict:
         raise NotImplementedError()
 
     def info(self) -> str:
-        raise NotImplementedError()
+        from pprint import pformat
+        return pformat(self.to_dict())
 
     @property
     def width(self) -> int:
@@ -146,58 +218,68 @@ class BaseProjectionModel:
     def height(self) -> int:
         return self._matrix.height
 
+    @property
+    def fmt_lat(self) -> str:
+        lat = self.origin.latitude.degrees
+        return f"{lat:.2f}°N" if lat > 0 else f"{abs(lat):.2f}°S"
 
-class GeocentricProjectionModel(BaseProjectionModel):
+    @property
+    def fmt_lon(self) -> str:
+        lon = self.origin.longitude.degrees
+        return f"{lon:.2f}°E" if lon > 0 else f"{abs(lon):.2f}°W"
+
+    @property
+    def fmt_lat_lon(self) -> str:
+        return f"{self.fmt_lat} {self.fmt_lon}"
+
+
+class GeocentricProjection(BaseProjection):
     """Geocentric Grid above an observer on the surface of the Earth and about the surface of the Earth where each row and col represents a given number of degrres change in latitude and longitude respectively"""
     name = "geo"
 
-    def info(self) -> str:
+    def to_dict(self) -> dict:
         from .models import Orbits
-        orbits = Orbits()
+        return {
+            "model": "Geocentric",
+            "origin": self.fmt_lat_lon,
+            "orbits": [
+                {
+                    "name": orbit.name,
+                    "altitude [km]": orbit.alt,
+                    "minimum FoV [deg]": self.minimum_FoV(orbit.alt),
+                    "area equivalent FoV [deg]": self.equivalent_FoV(orbit.alt)
+                }
+                for orbit in Orbits().orbits
+            ]
+        }
 
-        lat = self.origin.latitude.degrees
-        lon = self.origin.longitude.degrees
-        lat_str = f"{lat:.2f}°N" if lat > 0 else f"{abs(lat):.2f}°S"
-        lon_str = f"{lon:.2f}°E" if lon > 0 else f"{abs(lon):.2f}°W"
+    def _project(self, orbital_positions: list[OrbitalPosition]) -> SatFrame:
+        out_frame = SatFrame(self)
 
-        orbit_str = [
-            f'\t{orbit.name} - {orbit.alt}km - minimum FoV {self.minimum_FoV(orbit.alt):.0f}° - area equivalent FoV {self.equivalent_FoV(orbit.alt):.0f}°\n' for orbit in orbits.orbits
-        ]
+        for position in orbital_positions:
+            # get position data for each sat
+            lat = position.geo.lat
+            lon = position.geo.lon
+            alt = position.geo.alt
 
-        return f"Geocentric Projection\n\tobserver: {lat_str}, {lon_str}\n\tcell width: {self.y_width:.2f}°N/S, {self.x_width:.2f}°E/W\n\tfield of view depends on altitude as observer and oribit are not co-located\n{''.join(orbit_str)}"
-
-    def generate_sat_frame(self, t: Time) -> SatFrame:
-        """checks whether each sat in sats falls within the grid box when propogated to a given time defined about the center of the Earth above the origin location. This checks whether each satellite is within a given latitude and longitude range around the observer.
-
-        If the sat falls within this grid the it is added to the SatFrame and returned. The (x, y) coordinates and sat provided as args, where the top left cell is given the position (0, 0).
-
-        Args:
-            t: Time propogation time for sat.
-        """
-        frame = SatFrame(self, t)
-
-        for sat in self._sats.sats:
-            # propogate
-            lat, lon, alt = sat.projected_lat_lon_alt(t)
-
-            # ignore when propogation is invalid
+            # ignore sat if the position is invalid
             if math.isnan(lat) or math.isnan(lon) or math.isnan(alt):
                 continue
 
-            # calculate idx within frame of sat
-            x = int((lon - self.origin.longitude.degrees) /
-                    self.x_width + self.width/2)
+            # calculate idx (float) within the frame and ignore if not in the frame
+            x = (lon - self.origin.latitude.degrees) / \
+                self.x_width + self.width/2
             if x < 0 or x >= self.width:
                 continue
 
-            y = self.height - int((lat - self.origin.latitude.degrees) /
-                                  self.y_width + self.height/2)
+            y = self.height - (lat - self.origin.latitude.degrees) / \
+                self.y_width + self.height/2
             if y < 0 or y >= self.height:
                 continue
 
-            frame.add_sat(SatPosition(sat, x, y, altiude=alt))
+            out_frame.add_frame_position(FramePosition(position, x, y))
 
-        return frame
+        return out_frame
 
     @classmethod
     def _cell_width_and_height_from_FoV(cls, matrix: Matrix, FoV: float) -> tuple[float, float]:
@@ -272,7 +354,7 @@ class GeocentricProjectionModel(BaseProjectionModel):
     def equivalent_FoV(self, alt) -> float:
         """area effective FoV within model from the observer for a given altitude [km]
 
-        this is an equivalent FoV based on the area of the square projection if it was a circle and gives a better idea of the amount of visible sky 
+        this is an equivalent FoV based on the area of the square projection if it was a circle and gives a better idea of the amount of visible sky
 
         Args:
             alt: altitude [km]
@@ -283,17 +365,19 @@ class GeocentricProjectionModel(BaseProjectionModel):
         return self._FoV_relative_to_observer(0.5 * math.sqrt(math.pi * ((self.width * self.x_width)**2 + (self.height * self.y_width)**2)), alt)
 
 
-class TopocentricProjectionModel(BaseProjectionModel):
+class TopocentricProjection(BaseProjection):
     """Topocentric Grid about an origin on the surface of the Earth where each row and col represents a specified change in degrees North and East"""
     name = "topo"
 
-    def info(self) -> str:
-        lat = self.origin.latitude.degrees
-        lon = self.origin.longitude.degrees
-        lat_str = f"{lat:.2f}°N" if lat > 0 else f"{abs(lat):.2f}°S"
-        lon_str = f"{lon:.2f}°E" if lon > 0 else f"{abs(lon):.2f}°W"
-
-        return f"Topocentric Projection\n\tobserver: {lat_str}, {lon_str}\n\tcell width: {self.y_width:.2f}°N/S, {self.x_width:.2f}°E/W\n\tminimum FoV: {self.minimum_FoV():.2f}°\n\tequivalent FoV: {self.equivalent_FoV():.2f}°\n"
+    def to_dict(self) -> dict:
+        return {
+            "model": "Topocentric",
+            "origin": self.fmt_lat_lon,
+            "minimum FoV [deg]": self.minimum_FoV(),
+            "area equivalent FoV [deg]": self.equivalent_FoV(),
+            "cell height [deg/cell]": self.y_width,
+            "cell width [deg/cell]": self.x_width
+        }
 
     @classmethod
     def _cell_width_and_height_from_FoV(cls, matrix: Matrix, FoV: float) -> tuple[float, float]:
@@ -310,52 +394,38 @@ class TopocentricProjectionModel(BaseProjectionModel):
             (4 * FoV**2)/(math.pi * (matrix.width**2 + matrix.height**2)))
         return cell_width, cell_height
 
-    def generate_sat_frame(self, t: Time) -> SatFrame:
-        """checks whether each sat in sats falls with the grid box when progtated to a given time defined about the origin (topocentric), where the angels are perpendicular to themselves in the North and East directions. This gives an effective field of view from the origin/observer, given by north and south angles normal to the origin/observers point on the Earth.
+    def _project(self, orbital_positions: list[OrbitalPosition]) -> SatFrame:
+        out_frame = SatFrame(self)
 
-        If the sat falls within this grid the supplied function fn is added to the SatFrame and returned where the top left cell is given the position (0, 0).
+        for position in orbital_positions:
+            # get position data for each sat
+            alt, azi, distance = position.topo.altitude_azimuth_and_distance(
+                self.origin
+            )
 
-        Args:
-            t: propogation time for sat.
-        """
-
-        sats: list[SatPosition] = []
-
-        for sat in self._sats.sats:
-            # propogate
-            alt, azi, distance = sat.topocentric_alt_azimuth_distance(
-                self.origin, t)
-
-            # ignore when propogation is invalid
+            # ignore sat if the position is invalid
             if math.isnan(alt) or math.isnan(azi) or math.isnan(distance):
                 continue
 
-            # Tinker with azimuth so North is up
+            # tinker with azimuth so North is up
             azi += 90
 
-            # calculate North and East Position from alt/azi
-            N = (90 - alt) * math.sin(math.radians(azi))  # N
-            E = (90 - alt) * math.cos(math.radians(azi))  # E
+            # calculate north and east postion from alt/azi
+            N = (90 - alt) * math.sin(math.radians(azi))
+            E = (90 - alt) * math.cos(math.radians(azi))
 
-            # calculate idx of sat
-            x = int(E/self.x_width + self.width/2)
+            # calculate idx (float) within the frame and ignore if not in the frame
+            x = E/self.x_width + self.width/2
             if x < 0 or x >= self.width:
                 continue
 
-            y = int(N/self.y_width + self.height/2)
+            y = N/self.y_width + self.height/2
             if y < 0 or y >= self.height:
                 continue
 
-            # calculate altitude (distance) [km]
-            alt_distance = math.sqrt(
-                distance**2 + EARTH_RADIUS**2 - 2 * distance *
-                EARTH_RADIUS * math.cos(math.radians(alt + 90))
-            ) - EARTH_RADIUS
+            out_frame.add_frame_position(FramePosition(position, x, y))
 
-            sats.append(SatPosition(
-                sat, x, y, altiude=alt_distance, distance=distance))
-
-        return SatFrame(self, t, sats)
+        return out_frame
 
     def minimum_FoV(self) -> float:
         """minimimum FoV from the observers locations

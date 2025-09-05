@@ -18,6 +18,7 @@ This relies on the [SGP.NET library](https://github.com/parzivail/SGP.NET).
 */
 
 // Define all urls to download data
+// ! This assumes the groups on the website do not change - but they do :(
 string[] groups = [
     "weather", "noaa", "goes", "resource", "sarsat", "dmc", "tdrss", "argos", "planet", "spire", "geo", "intelsat", "iridium", "starlink", "orbcomm", "swarm", "x-comm", "ses", "iridium-NEXT", "oneweb", "globalstar", "amateur", "other-comm", "satnogs", "gorizont", "raduga", "molniya", "gnss", "gps-ops", "glo-ops", "galileo", "beidou", "sbas", "nnss", "musson", "science", "geodetic", "engineering", "education", "military", "radar", "cubesat", "other", "stations", "visual", "active", "analyst"
 ];
