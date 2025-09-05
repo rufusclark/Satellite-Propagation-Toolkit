@@ -6,11 +6,9 @@ pypng
 requests
 bs4
 opencv-python
-pprint
 scikit-learn
 imageio
 reportlab
-pprint
 flask
 flask-compress
 waitress
