@@ -13,3 +13,4 @@ reportlab
 pprint
 flask
 flask-compress
+waitress

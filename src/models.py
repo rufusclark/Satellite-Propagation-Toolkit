@@ -11,6 +11,8 @@ from skyfield.framelib import itrs
 
 from sgp4.api import Satrec, WGS84
 
+from numpy import rad2deg, pi
+
 # Time scale for Earth Orbiting Satellites
 ts = load.timescale()
 
@@ -21,6 +23,8 @@ counter = 100000
 def get_next_id():
     global counter
     counter += 1
+    if counter >= 339999:
+        counter = 100000
     return counter
 
 
@@ -39,6 +43,7 @@ class Satellite:
 
     @classmethod
     def from_tle(cls, fields, group: str = "", category: str = "") -> Self:
+        """See `datasources.py` for usage"""
         return cls(
             sat=EarthSatellite.from_omm(ts, fields),
             group=group,
@@ -122,6 +127,46 @@ class Satellite:
 
         return sat
 
+    def to_tle(self) -> list[str]:
+        # !
+        # !
+        # !
+        # ! Change of implementation - store tle on creation or generate reasonable data for Satellites made with other methods
+        # !
+        # !
+        # !
+
+        raise NotImplementedError(
+            "This feature is yet to be completely implemented"
+        )
+
+        # TODO: Implement tle f-strings
+
+        # line two
+        # satellite number
+        sat_no = f"{self.satellite_number:05}" if self.satellite_number <= 99999 else "00000"
+        # TODO: Implement line two
+
+        # line three
+        i = f"{rad2deg(self.inclination):07.4f}" if rad2deg(
+            self.inclination) <= 999 else "000.0000"  # inclination degrees
+        RAAN = f"{rad2deg(self.right_ascension_of_ascending_node):07.4f}" if rad2deg(
+            self.right_ascension_of_ascending_node) <= 999 else "000.0000"  # RAAN degrees
+        e = f"{self.eccentricity*10000000:07d}" if self.eccentricity <= 1 else "0000000"
+        argument_of_perigee = f"{rad2deg(self.argument_of_perigee):07.4f}" if rad2deg(
+            self.argument_of_perigee) <= 999 else "000.0000"  # argument of perigee degrees
+        mean_anomaly = f"{rad2deg(self.mean_anomaly):07.4f}" if rad2deg(
+            self.mean_anomaly) <= 999 else "000.0000"  # mean anomaly degrees
+        mean_motion = f"{self.mean_motion*(720/pi):011.8f}" if self.mean_motion else "00.00000000"
+        rev_num = ...
+        checksum = ...
+
+        return [
+            self.name,
+            f"1 {sat_no}U",
+            f"2 {sat_no} {i} {RAAN} {e} {argument_of_perigee} {mean_anomaly} {mean_motion}{rev_num}{checksum}"
+        ]
+
     @property
     def object_type(self) -> str | None:
         return self._object_type
@@ -175,6 +220,7 @@ class Satellite:
 
     @property
     def inclination(self) -> float:
+        """inclination [radians]"""
         return self._sat.model.inclo
 
     @property

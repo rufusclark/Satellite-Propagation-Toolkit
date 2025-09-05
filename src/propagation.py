@@ -473,17 +473,17 @@ class KeplerianPropagation(BasePropagation):
         """
         cls = KeplerianPropagation
 
-        # 1. Mean motion
+        # Mean motion - constant
         n = np.sqrt(mu / a**3)
 
-        # 2. Mean anomaly at time t
+        # Mean anomaly at time t
         M = M0 + n*(t - t0)
         M = np.mod(M, 2*np.pi)
 
-        # 3. Solve Kepler's equation for eccentric anomaly
+        # Solve Kepler's equation for eccentric anomaly
         E = cls._solve_kepler(M, e)
 
-        # 4. True anomaly and radius
+        # True anomaly and radius
         nu = np.arctan2(np.sqrt(1-e**2)*np.sin(E), np.cos(E)-e)
         r = a*(1 - e*np.cos(E))
         p = a*(1 - e**2)
@@ -492,12 +492,12 @@ class KeplerianPropagation(BasePropagation):
         r_pf = np.array([r*np.cos(nu), r*np.sin(nu), 0.0])
         v_pf = np.sqrt(mu/p) * np.array([-np.sin(nu), e+np.cos(nu), 0.0])
 
-        # 5. Rotate to ECI
+        # Rotate to ECI
         Q = cls._R3(RAAN) @ cls._R1(i) @ cls._R3(argp)
         r_ECI = Q @ r_pf
         v_ECI = Q @ v_pf
 
-        # 6. Convert to ECEF (simple Earth rotation model with arbitrary theta0)
+        # Convert to ECEF (simple Earth rotation model with arbitrary theta0)
         theta_gst = theta0 + omega_earth * (t - t0)
         r_ECEF = cls._R3(theta_gst) @ r_ECI
 

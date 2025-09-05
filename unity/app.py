@@ -1,0 +1,236 @@
+# fmt: off
+import os
+import sys
+sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('..'))
+
+from src import *
+
+import time
+import math
+import json
+import sqlite3
+import traceback
+import datetime
+
+from flask import Flask, jsonify, request, Response, g
+from flask_compress import Compress
+# fmt: on
+
+app = Flask(__name__)
+# default is 'gzip', can also use 'brotli'
+app.config['COMPRESS_ALGORITHM'] = 'gzip'
+app.config['COMPRESS_LEVEL'] = 6  # gzip compression level (1-9)
+app.config['COMPRESS_MIN_SIZE'] = 100  # compress smaller responses
+Compress(app)
+
+DATABASE = "./data/api_cache.db"
+
+# key value pair for selecting the appropriate model for satellite sets
+"""
+Insert more MOCAT model files with keys here to expose them via the API
+"""
+MODEL_FILES = {
+    "live": "live",
+    "initial orbital capacity": "./data/MOCAT/initial orbital capacity.csv"
+}
+"""
+Insert more MOCAT model files above
+"""
+MODELS = list(MODEL_FILES.keys())
+FORMATS = ["cartesian", "keplerian"]
+YEARS = [i for i in range(0, 105, 5)]
+
+
+def get_db() -> sqlite3.Connection:  # type: ignore
+    if "db" not in g:
+        g.db = sqlite3.connect(DATABASE)
+        g.db.execute("""
+            CREATE TABLE IF NOT EXISTS cache (
+                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                     year REAL NOT NULL,
+                     format TEXT NOT NULL,
+                     model TEXT NOT NULL,
+                     expire_unix INTEGER NOT NULL,
+                     data TEXT
+                )
+        """)
+        print(f"Connected to {DATABASE}")
+    return g.db
+
+
+@app.teardown_appcontext
+def close_db(exception):
+    db = g.pop("db", None)
+    if db:
+        db.close()
+        print(f"Closed connection to {DATABASE}")
+
+
+def get_output(
+    years: float = 0,
+    format: str = "cartesian",
+    model: str = "live",
+    *,
+    _remove_empty_keys: bool = True
+) -> Response:
+    """compute the output and return the formatted json"""
+    # enforce years if live
+    if model == "live":
+        years = 0
+
+    # redirect future to a specific dataset
+    if model == "future":
+        model = "initial orbital capacity"
+
+    # input validation
+    if format not in FORMATS or model not in MODELS:
+        return options()[0]
+
+    # check sqlite cache
+    db = get_db()
+    row = db.execute(
+        "SELECT data FROM cache WHERE year = ? AND format = ? AND model = ? AND expire_unix > ?", (years, format, model, time.time())).fetchone()
+    print(f"{years=} {format=} {model=} cached={row is not None}")
+    if row:
+        # return cached response
+        print(f"Returned response from cache")
+        return Response(row[0].encode("utf-8"), content_type="application/json")
+
+    # compute as not cached
+
+    # get the correct satellite set based on the model
+    if model == "live":
+        sats = init_sats()
+    else:
+        sats = future.MOCATReader(MODEL_FILES[model]).read_yrs(
+            years).to_SatelliteSet()
+
+    # get satellite orbital positions
+    positions = SGP4Propagation().propagate(sats, ts.now())
+
+    # !: TLE/SGP4 is not currently supported
+    # generate the output based on the foramt
+    out = [
+        {
+            "name": position.sat.name,
+            "category": position.sat.category,
+            "launch date": position.sat.launch_date.isoformat() if isinstance(position.sat.launch_date, datetime.datetime) else "",
+            "launch site": position.sat.launch_site,
+            "launch country": position.sat.launch_country,
+            "object type": position.sat.object_type,
+            "operational status": position.sat.operational_status,
+            "owner": position.sat.owner,
+            "tags": [tag for tag in position.sat.tags if tag.lower() not in [position.sat.category.lower(), (position.sat.operational_status or "").lower(), (position.sat.launch_site or "").lower(), (position.sat.launch_country or "").lower(), (position.sat.object_type or "").lower(), (position.sat.owner or "").lower(), ""]],
+            **({
+                "a": position.semi_major_axis,
+                "e": position.eccentricity,
+                "i": position.inclination,
+                "Omega": position.Omega,
+                "omega": position.omega,
+                "M_0": position.mean_anomaly,
+                "t_0": position.time.utc_iso(),
+                "theta_g0": KeplerianPropagation._greenwich_sidereal_angle(position.sat.epoch)
+            } if format == "keplerian" else {}
+            ),
+            **({
+                "x": position.geo.x,
+                "y": position.geo.y,
+                "z": position.geo.z,
+                "x_v": position.geo.x_v,
+                "y_v": position.geo.y_v,
+                "z_v": position.geo.z_v,
+                "e": position.eccentricity,
+                "i": position.inclination,
+                "t_0": position.time.utc_iso()
+            } if format == "cartesian" and not math.isnan(position.geo.x) else {}
+            ),
+            **({
+                "tle": position.sat.to_tle()
+            } if format == "sgp4" else {}
+            )
+        }
+        for position in positions if True
+    ]
+
+    # remove empty value's keys
+    if _remove_empty_keys:
+        out = [{k: v for k, v in sat_out.items() if v} for sat_out in out]
+
+    # convert to json
+    json_out = json.dumps(out)
+
+    # cached the reponse
+    db.execute("INSERT OR REPLACE INTO cache (year, format, model, expire_unix, data) VALUES (?, ?, ?, ?, ?)",
+               (years, format, model, time.time()+60*60*24*3, json_out))
+    db.commit()
+    print(f"Cached response")
+
+    return Response(json_out, content_type="application/json")
+
+
+def cache_updator():
+    """updates all caches blocking"""
+    for model in MODELS:
+        for format in FORMATS:
+            if model == "live":
+                get_output(model=model, format=format)
+            else:
+                for year in YEARS:
+                    get_output(years=year, model=model, format=format)
+
+
+# cache commonly use satellite sets when debug = False
+with app.app_context():
+    print(f"{app.debug=}")
+
+
+@app.route("/")
+def root():
+    return jsonify({"status": "healthy"}), 200
+
+
+@app.route("/sats/options", methods=["GET"])
+def options():
+    """return option details"""
+    return jsonify({
+        "model": [*MODELS, "future"],
+        "format": FORMATS,
+        "year": YEARS,
+        "example": f"/sats?model={MODELS[0]}&format={FORMATS[0]}"
+    }), 200
+
+
+@app.route("/sats", methods=["GET"])
+def sats():
+    """api route with options
+
+    i.e. `/sats?model=live&format=keplerian`
+    or `/sats?model=initial orbital capacity&format=keplerian&year=10`"""
+    model = request.args.get("model", "live")
+    format = request.args.get("format", "keplerian")
+    year = request.args.get("year", 0, type=float)
+
+    print(f"{model=} {format=} {year=}")
+
+    try:
+        return get_output(
+            years=int(round(year, 1)),
+            model=model,
+            format=format
+        ), 200
+    except Warning as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    traceback.print_tb(e.__traceback__)
+    if app.debug:
+        return jsonify({"error": str(e)}), 500
+    else:
+        return jsonify({"error": ""}), 500
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
