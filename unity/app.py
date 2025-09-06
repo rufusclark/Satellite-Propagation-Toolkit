@@ -72,9 +72,23 @@ def get_output(
     format: str = "cartesian",
     model: str = "live",
     *,
-    _remove_empty_keys: bool = True
+    _remove_empty_keys: bool = True,
+    _current_time: float | None = None
 ) -> Response:
-    """compute the output and return the formatted json"""
+    """handle request for satellites sets from the API.
+
+    handles input validation, checks sqlite3 cache and return cache or generates new outputs and returns/caches it
+
+    Args:
+        years: years in future for projected satellites. Defaults to 0.
+        format: output format. Defaults to "cartesian".
+        model: satellite set model. Defaults to "live".
+        _remove_empty_keys: remove key:val pairs where val is empty. Defaults to True.
+        _current_time: overwrite the current time for cache validation - supports generating new caches before they expire. Defaults to None.
+
+    Returns:
+        Flask.Response(): formatted json response
+    """
     # enforce years if live
     if model == "live":
         years = 0
@@ -87,10 +101,14 @@ def get_output(
     if format not in FORMATS or model not in MODELS:
         return options()[0]
 
+    # handle custom times
+    if _current_time is None:
+        _current_time = time.time()
+
     # check sqlite cache
     db = get_db()
     row = db.execute(
-        "SELECT data FROM cache WHERE year = ? AND format = ? AND model = ? AND expire_unix > ?", (years, format, model, time.time())).fetchone()
+        "SELECT data FROM cache WHERE year = ? AND format = ? AND model = ? AND expire_unix > ?", (years, format, model, _current_time)).fetchone()
     print(f"{years=} {format=} {model=} cached={row is not None}")
     if row:
         # return cached response
@@ -171,13 +189,15 @@ def get_output(
 
 def cache_updator():
     """updates all caches blocking"""
+    unix_time = time.time() + 60*60
     for model in MODELS:
         for format in FORMATS:
             if model == "live":
-                get_output(model=model, format=format)
+                get_output(model=model, format=format, _current_time=unix_time)
             else:
                 for year in YEARS:
-                    get_output(years=year, model=model, format=format)
+                    get_output(years=year, model=model,
+                               format=format, _current_time=unix_time)
 
 
 # cache commonly use satellite sets when debug = False
