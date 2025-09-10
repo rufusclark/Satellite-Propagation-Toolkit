@@ -10,7 +10,7 @@ from .models import ts, Orbits, Satellite, SatelliteSet
 from .datasources import NORAD, SATCAT, init_sats
 from .matrix import Matrix, ImageFrame
 from .rgb import *
-from .analysis import AlwaysPixelModifier, LaunchDateModifier, TagPixelModifier, NotTagPixelMofidier, AltitudeModifier, DistanceModifier, Modifiers, FuzzyTagPixelModifier, FuzzyNotTagPixelModifier
+from .analysis import AlwaysPixelModifier, LaunchDateModifier, TagPixelModifier, NotTagPixelMofidier, AltitudeModifier, DistanceModifier, Modifiers, FuzzyTagPixelModifier, FuzzyNotTagPixelModifier, CustomPixelModifier
 from .device import *
 from .projection import TopocentricProjection, GeocentricProjection
 from .progress import LapTimer

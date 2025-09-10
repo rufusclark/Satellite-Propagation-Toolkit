@@ -110,6 +110,22 @@ class OrbitalPosition:
     mean_anomaly = M
     mean_motion_per_day = n
 
+    def is_above_horizon(self, obs: GeographicPosition) -> bool:
+        self.topo.altitude_azimuth_and_distance(obs)
+        return self.topo.alt > 0
+
+    def is_geo(self) -> bool:
+        GEO_ALT = 35786
+        return (
+            self.geo.alt < GEO_ALT + 500
+            and self.geo.alt > GEO_ALT - 500
+            and self.sat.eccentricity < 0.05
+            and abs(self.sat.inclination) < 0.05
+        )
+
+    def is_leo(self) -> bool:
+        return self.geo.alt < 2000
+
     def _calculate_osculating_elements(self) -> None:
         """calculate osculating elements from existing GCRS position"""
         if not self.gcrs_position:

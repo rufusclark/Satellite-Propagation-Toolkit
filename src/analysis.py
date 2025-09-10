@@ -1,5 +1,6 @@
-"""contains code for analysing propogation data"""
-from typing import TYPE_CHECKING
+"""contains code for analysing propagation data"""
+from typing import TYPE_CHECKING, Callable
+from types import MethodType
 
 from .rgb import RGB
 from datetime import datetime
@@ -44,6 +45,24 @@ class BasePixelModifier:
     def info(self) -> str:
         from pprint import pformat
         return pformat(self.to_dict())
+
+
+class CustomPixelModifier(BasePixelModifier):
+    """custom pixel modifier"""
+    name = "CustomPixelModifier"
+
+    def __init__(
+            self,
+            modifier: RGB,
+            description: str,
+            is_match: Callable[["FramePosition"], bool]
+    ) -> None:
+        self.modifier = modifier
+        self._description = description  # type: ignore
+        self._is_match = is_match  # type: ignore
+
+    def description(self) -> str:
+        return self._description
 
 
 class AlwaysPixelModifier(BasePixelModifier):

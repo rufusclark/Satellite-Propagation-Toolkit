@@ -31,6 +31,3 @@ docs/
 
 # C# dev
 *.sln
-
-# Whitelist pkl files
-!data/**/*.pkl

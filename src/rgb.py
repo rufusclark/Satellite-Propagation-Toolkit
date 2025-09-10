@@ -13,6 +13,15 @@ class RGB:
         from random import randint
         return cls(randint(0, 255), randint(0, 255), randint(0, 255))
 
+    def __mul__(self, other: int | float) -> "RGB":
+        if not isinstance(other, (int, float)):
+            return NotImplemented
+        return RGB(
+            R=int(self.R*other),
+            G=int(self.G*other),
+            B=int(self.B*other)
+        )
+
     def is_off(self) -> bool:
         return self.R == self.G == self.B == 0
 
