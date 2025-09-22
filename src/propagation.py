@@ -12,8 +12,6 @@ import datetime
 import numpy as np
 from numpy.typing import NDArray
 
-from scipy.interpolate import CubicSpline
-
 # TODO: Add methods for quickly and easily plotting ground tracks and other data
 # TODO: Implement SatellitePositions
 # TODO: Implement propagation techiques
@@ -542,6 +540,8 @@ class CubicInterpolation(BasePropagation):
         """
         super().__init__()
 
+        from scipy.interpolate import CubicSpline
+
         self._cached_values: dict[int, dict[str, NDArray[np.float64]]] = {}
         self._cubic_splines: dict[int, dict[str, CubicSpline]] = {}
 
@@ -576,6 +576,8 @@ class CubicInterpolation(BasePropagation):
                     f"{name} is not an attribute of {position}: {e}")
 
     def _calculate_cubic_splines(self, sat: Satellite) -> None:
+        from scipy.interpolate import CubicSpline
+
         for key, value in self._cached_values[sat.id].items():
             if key == "time":
                 continue

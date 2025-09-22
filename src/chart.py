@@ -1,14 +1,13 @@
 """utility functions for quickly charting data"""
 
-from matplotlib.axes import Axes
 import numpy as np
-
-import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
 
 from skyfield.api import Time
 
-from typing import Sequence
+from typing import Sequence, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
 
 from .propagation import OrbitalPosition
 from .projection import EARTH_RADIUS
@@ -19,6 +18,9 @@ def plot_interpolation_analysis(*datasets: tuple[Sequence[Time], list[float], li
 
     datasets: [Time, actual, interpolated, label]
     """
+    import matplotlib.pyplot as plt
+    import matplotlib.gridspec as gridspec
+
     n = len(datasets)
 
     # setup plot
@@ -27,7 +29,7 @@ def plot_interpolation_analysis(*datasets: tuple[Sequence[Time], list[float], li
         'Interpolation Analysis')
     fig.suptitle("Interpolation Analysis", fontweight='bold')
     gs = gridspec.GridSpec(n, 3, width_ratios=[4, 4, 1])
-    axs: list[Axes] = [None for _ in range(n*3)]  # type: ignore
+    axs: list["Axes"] = [None for _ in range(n*3)]  # type: ignore
 
     # setup text output
     col_width = 20
@@ -103,6 +105,9 @@ def plot_orbital_overview(
         _plot: whether to plot (popout). Defaults to True.
         _filename: filename to save (if provided it will be saved). Defaults to "".
     """
+    import matplotlib.pyplot as plt
+    import matplotlib.gridspec as gridspec
+
     # setup plot
     fig = plt.figure(figsize=(10, 8))  # type: ignore
     fig.canvas.manager.set_window_title(  # type: ignore
@@ -110,7 +115,7 @@ def plot_orbital_overview(
     fig.suptitle(
         f"Orbital Overview ({len(orbital_positions)} Satellites)", fontweight='bold')
     gs = gridspec.GridSpec(3, 3, width_ratios=[1, 1, 1])
-    axs: list[Axes] = []
+    axs: list["Axes"] = []
 
     axs.append(altitude_histogram(
         fig.add_subplot(gs[0, 0]), orbital_positions)
@@ -155,7 +160,7 @@ def plot_orbital_overview(
         plt.show()
 
 
-def altitude_histogram(axes: Axes, orbital_positions: list[OrbitalPosition]) -> Axes:
+def altitude_histogram(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
     return _histogram(
         axes=axes,
         label="altitude [km]",
@@ -163,7 +168,7 @@ def altitude_histogram(axes: Axes, orbital_positions: list[OrbitalPosition]) -> 
     )
 
 
-def eccentricity_histogram(axes: Axes, orbital_positions: list[OrbitalPosition]) -> Axes:
+def eccentricity_histogram(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
     return _histogram(
         axes=axes,
         label="eccentricity",
@@ -171,7 +176,7 @@ def eccentricity_histogram(axes: Axes, orbital_positions: list[OrbitalPosition])
     )
 
 
-def inclination_histogram(axes: Axes, orbital_positions: list[OrbitalPosition]) -> Axes:
+def inclination_histogram(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
     return _histogram(
         axes=axes,
         label="inclination [deg]",
@@ -180,7 +185,7 @@ def inclination_histogram(axes: Axes, orbital_positions: list[OrbitalPosition]) 
     )
 
 
-def right_ascension_of_ascending_node_histogram(axes: Axes, orbital_positions: list[OrbitalPosition]) -> Axes:
+def right_ascension_of_ascending_node_histogram(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
     return _histogram(
         axes=axes,
         label="right ascension of ascending node [deg]",
@@ -189,7 +194,7 @@ def right_ascension_of_ascending_node_histogram(axes: Axes, orbital_positions: l
     )
 
 
-def argument_of_perigee_histogram(axes: Axes, orbital_positions: list[OrbitalPosition]) -> Axes:
+def argument_of_perigee_histogram(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
     return _histogram(
         axes=axes,
         label="argument of perigee [deg]",
@@ -198,7 +203,7 @@ def argument_of_perigee_histogram(axes: Axes, orbital_positions: list[OrbitalPos
     )
 
 
-def launch_age_histogram(axes: Axes, orbital_positions: list[OrbitalPosition]) -> Axes:
+def launch_age_histogram(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
     return _histogram(
         axes=axes,
         label="launch age [years]",
@@ -207,7 +212,7 @@ def launch_age_histogram(axes: Axes, orbital_positions: list[OrbitalPosition]) -
     )
 
 
-def category_piechart(axes: Axes, orbital_positions: list[OrbitalPosition]) -> Axes:
+def category_piechart(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
     # compute the number of each category
     counts: dict[str, int] = {}
     for position in orbital_positions:
@@ -228,7 +233,7 @@ def category_piechart(axes: Axes, orbital_positions: list[OrbitalPosition]) -> A
     )
 
 
-def owner_piechart(axes: Axes, orbital_positions: list[OrbitalPosition]) -> Axes:
+def owner_piechart(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
     # compute the number of each category
     counts: dict[str, int] = {}
     for position in orbital_positions:
@@ -248,7 +253,7 @@ def owner_piechart(axes: Axes, orbital_positions: list[OrbitalPosition]) -> Axes
     )
 
 
-def launch_site_piechart(axes: Axes, orbital_positions: list[OrbitalPosition]) -> Axes:
+def launch_site_piechart(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
     # compute the number of each category
     counts: dict[str, int] = {}
     for position in orbital_positions:
@@ -268,7 +273,7 @@ def launch_site_piechart(axes: Axes, orbital_positions: list[OrbitalPosition]) -
     )
 
 
-def launch_country_piechart(axes: Axes, orbital_positions: list[OrbitalPosition]) -> Axes:
+def launch_country_piechart(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
     # compute the number of each category
     counts: dict[str, int] = {}
     for position in orbital_positions:
@@ -288,7 +293,7 @@ def launch_country_piechart(axes: Axes, orbital_positions: list[OrbitalPosition]
     )
 
 
-def _histogram(axes: Axes, label: str, data: list[float]) -> Axes:
+def _histogram(axes: "Axes", label: str, data: list[float]) -> "Axes":
     axes.hist(data, bins=100, log=True)
     axes.set_xlabel(label)
     axes.set_ylabel("frequency")
@@ -297,7 +302,7 @@ def _histogram(axes: Axes, label: str, data: list[float]) -> Axes:
     return axes
 
 
-def _piechart(axes: Axes, label: str, data: dict[str, int]) -> Axes:
+def _piechart(axes: "Axes", label: str, data: dict[str, int]) -> "Axes":
     # sort dicts and combine smaller terms
     n = 9
     sorted_items = sorted(
@@ -326,6 +331,8 @@ def _piechart(axes: Axes, label: str, data: dict[str, int]) -> Axes:
 
 
 def plot_on_Earth(orbital_positions: list[OrbitalPosition]) -> None:
+    import matplotlib.pyplot as plt
+
     x = np.array([position.geo.x for position in orbital_positions])
     y = np.array([position.geo.y for position in orbital_positions])
     z = np.array([position.geo.z for position in orbital_positions])

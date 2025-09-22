@@ -2,11 +2,9 @@
 from typing import List, Dict
 
 import os
-import requests
 import functools
 import pickle
 from csv import DictReader
-from bs4 import BeautifulSoup
 
 from skyfield.api import load
 
@@ -63,6 +61,9 @@ class NORAD:
 
     def get_source_groups_from_celesTrak(self) -> None:
         """get the source groups from celesTrak and cache the data in a pickle"""
+        import requests
+        from bs4 import BeautifulSoup
+
         url = f"https://celestrak.org/NORAD/elements/index.php?FORMAT={self.filetype}"
         sources_by_group: Dict[str, NORADSource] = {}
 
@@ -371,7 +372,6 @@ def init_sats() -> SatelliteSet:
     # load all sats and update if old
     norad = NORAD()
     norad.get_source_groups()
-    # norad.update_source_groups() # ! Remove old code
     norad.update_sources()
     sats = norad.load_all_sats()
 

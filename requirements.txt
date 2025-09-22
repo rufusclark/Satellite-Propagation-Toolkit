@@ -2,7 +2,6 @@ skyfield
 pyserial
 typing_extensions
 geocoder
-pypng
 requests
 bs4
 opencv-python
@@ -13,3 +12,4 @@ flask
 flask-compress
 waitress
 matplotlib
+numpy

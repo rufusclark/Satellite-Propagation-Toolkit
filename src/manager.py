@@ -1,4 +1,4 @@
-"""manager is a object for managing the entire output generation process to images, videos, gifs and more whilst obfiscating the complexity away"""
+"""manager is a object for managing the entire output generation process to images, videos, gifs and more whilst obfuscating the complexity away"""
 
 from datetime import timedelta
 from pathlib import Path
@@ -39,7 +39,7 @@ class Manager:
     ) -> None:
         """create a new generator object.
 
-        provde your own processed `SatelliteSet` object or leave it blank to use all available satellites as default
+        provide your own processed `SatelliteSet` object or leave it blank to use all available satellites as default
 
         Args:
             sats: `SatelliteSet` to use. Defaults to init_sats().
@@ -63,9 +63,9 @@ class Manager:
         background_colour: RGB = BLACK,
         pixel_width_per_object: int = 1
     ) -> None:
-        """generate image generates a single images based on the follwoing parameters.
+        """generate image generates a single images based on the following parameters.
 
-        this methods uses sensible defaults so you only need to change the minimum amount of parameters for your desired output rather than configurating everything.
+        this methods uses sensible defaults so you only need to change the minimum amount of parameters for your desired output rather than configuring everything.
 
         Args:
             observer: `GeographicPosition` of the observer. Defaults to get_estimated_latlon() (estimate your current location based on your ip address).
