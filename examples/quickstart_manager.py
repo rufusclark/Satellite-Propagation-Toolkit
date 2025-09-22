@@ -11,11 +11,8 @@ from datetime import timedelta
 manager = Manager()
 """generates a new manager object which loads all active satellites"""
 
-manager.generate_report()
-"""generate a pdf report from all the satellites from the projected view.
-
-this report contains an overview of everything in the view, details on all satellites and the output image itself"""
-
+manager.plot_orbital_overview()
+"""plot an interactive popup showing an overview of all satellites at a given time"""
 
 manager.generate_image(
     FoV=400,
@@ -39,5 +36,8 @@ manager.generate_video(
 )
 """generates a minute long video (with 1 fps) and runs in realtime using the default fields"""
 
-manager.plot_orbital_overview()
-"""plot an interactive popup showing an overview of all satellites at a given time"""
+
+# manager.generate_report()
+"""generate a pdf report from all the satellites from the projected view.
+
+this report contains an overview of everything in the view, details on all satellites and the output image itself"""

@@ -12,7 +12,30 @@ you can set your location manually with:
 >>> observer = wgs84.latlon(lat, lon)
 """
 
-modifier = Modifiers(AlwaysPixelModifier(RGB(255, 255, 255)))
+# modifier = Modifiers(AlwaysPixelModifier(RGB(255, 255, 255)))  # All white
+modifier = Modifiers(
+    CustomPixelModifier(  # Geostationary Satellites - Solid White
+        WHITE, "Geostationary",
+        lambda x: (
+            x.orbital_position.is_geo()
+            # and x.orbital_position.is_above_horizon(obs_mecd)
+        )
+    ),
+    CustomPixelModifier(  # Visible Satellites (from observer) - Grey
+        WHITE*0.35, "Visible",
+        lambda x: (
+            x.orbital_position.is_above_horizon(observer)
+            and not x.orbital_position.is_geo()
+        )
+    ),
+    CustomPixelModifier(  # All other Satellites - Faint Grey
+        WHITE*0.075, "Remaining",
+        lambda x: (
+            not x.orbital_position.is_above_horizon(observer)
+            and not x.orbital_position.is_geo()
+        )
+    )
+)
 """
 define modifier to render image with.
 
@@ -21,7 +44,7 @@ if the modifier is satisfied the pixel value of the corrosponding sat is added t
 this can be a list of any objects that inherit BasePixelModifier, see `analysis.py` for all available or define your own.
 """
 
-FoV = 120
+FoV = 400
 """
 set the field of view of the projection.
 
@@ -63,7 +86,7 @@ values in years between 0 and 100 are allowed
 print a list of all tags in the satellite dataset with the number of occurances
 """
 
-matrix = Matrix(128, 128)
+matrix = Matrix(800, 800)
 """
 define the pixel size of your matrix.
 
@@ -106,7 +129,7 @@ print(image_frame.key_info())
 print contextual information about the `ImageFrame` that has been generated including the satellites that are included within the frame.
 """
 
-image_frame.to_png("quickstart.png")
+image_frame.to_png("quickstart.png", _pixel_width_per_object=3)
 """
 save the `ImageFrame` as a png file as "quickstart.png" 
 """

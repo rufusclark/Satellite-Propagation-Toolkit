@@ -170,6 +170,7 @@ class NORAD:
                 try:
                     filepath = self.path + source.filename
                     if not load.exists(filepath) or load.days_old(filepath) >= self._cache_TTL:
+                        print("NORAD groups out-of-date: updating from CelesTrak")
                         self.get_source_groups_from_celesTrak()
                         break
                 except Exception as e:

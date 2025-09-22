@@ -180,7 +180,7 @@ def get_output(
 
     # cached the reponse
     db.execute("INSERT OR REPLACE INTO cache (year, format, model, expire_unix, data) VALUES (?, ?, ?, ?, ?)",
-               (years, format, model, time.time()+60*60*24*3, json_out))
+               (years, format, model, time.time()+60*60*24*5, json_out))
     db.commit()
     print(f"Cached response")
 
@@ -189,7 +189,7 @@ def get_output(
 
 def cache_updator():
     """updates all caches blocking"""
-    unix_time = time.time() + 60*60
+    unix_time = time.time() + 60*60*24*2
     for model in MODELS:
         for format in FORMATS:
             if model == "live":

@@ -137,6 +137,8 @@ The accuracy of the SGP4 propagation and the generated images have been verified
 
 Instructions for using the manager to generate images, videos, gifs and reports are available within [quickstart_manager.py](/examples/quickstart_manager.py) with documentation.
 
+![Orbital Overview at a point in time](/images/md/orbital_overview.png)
+
 ## Outreach recommendations
 
 If the goal of this project is to create an outreach device, the following hardware is recommended: The schematics for a 3D printable case are also available for download.
