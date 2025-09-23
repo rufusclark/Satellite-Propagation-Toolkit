@@ -221,6 +221,20 @@ def cache_updator():
                                format=format, _current_time=unix_time)
 
 
+def get_traffic_analysis() -> list:
+    """get analysis of tracking data from the tracking database"""
+    db = get_tracking_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT country, city, COUNT(DISTINCT ip || '|' || user_agent) AS unique_users, COUNT(*) as requests, AVG(duration_ms) AS avg_response_ms
+        FROM USAGE
+        GROUP BY country, city
+        ORDER BY requests DESC
+    """)
+    rows = c.fetchall()
+    return rows
+
+
 # cache commonly use satellite sets when debug = False
 with app.app_context():
     print(f"{app.debug=}")
@@ -262,6 +276,25 @@ def sats():
         ), 200
     except Warning as e:
         return jsonify({"error": str(e)}), 400
+
+
+@app.route("/traffic", methods=["GET"])
+def traffic():
+    # ! generate your own password hash or remove if hosting yourself
+    from werkzeug.security import check_password_hash
+
+    key = request.args.get("key", None)
+    if not key or not check_password_hash("scrypt:32768:8:1$ypqYQqVluJUgi2W3$60d2e133a7d9080c9c6f57d27a419ae1a29c261d9969afa67bd626a35a3733e0466bde91617e765569696dda1f2c66dd930801767db973d73f511b8658ee64ea", key):
+        return jsonify({"error": "Unauthorised"}), 401
+
+    data = [{
+        "country": row[0],
+        "city": row[1],
+        "unique users": row[2],
+        "requests": row[3],
+        "avg response [ms]": row[4]
+    } for row in get_traffic_analysis()]
+    return jsonify(data), 200
 
 
 @app.errorhandler(Exception)
