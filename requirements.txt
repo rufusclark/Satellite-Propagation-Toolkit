@@ -13,3 +13,4 @@ flask-compress
 waitress
 matplotlib
 numpy
+tabulate

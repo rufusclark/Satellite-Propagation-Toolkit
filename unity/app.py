@@ -25,6 +25,7 @@ app.config['COMPRESS_MIN_SIZE'] = 100  # compress smaller responses
 Compress(app)
 
 DATABASE = "./data/api_cache.db"
+TRACKING_DATABASE = "./data/api_tracking.db"
 
 # key value pair for selecting the appropriate model for satellite sets
 """
@@ -57,6 +58,26 @@ def get_db() -> sqlite3.Connection:  # type: ignore
         """)
         print(f"Connected to {DATABASE}")
     return g.db
+
+
+def get_tracking_db() -> sqlite3.Connection:  # type: ignore
+    if "tracking_db" not in g:
+        g.tracking_db = sqlite3.connect(TRACKING_DATABASE)
+        g.tracking_db.execute("""
+            CREATE TABLE IF NOT EXISTS usage (
+                     ts TEXT,
+                     endpoint TEXT,
+                     method TEXT,
+                     ip TEXT,
+                     user_agent TEXT,
+                     status_code INTEGER,
+                     duration_ms REAL,
+                     country TEXT,
+                     city TEXT
+                )
+        """)
+        print(f"Connected to {TRACKING_DATABASE}")
+    return g.tracking_db
 
 
 @app.teardown_appcontext
@@ -250,6 +271,44 @@ def handle_exception(e):
         return jsonify({"error": str(e)}), 500
     else:
         return jsonify({"error": ""}), 500
+
+
+@app.before_request
+def start_time():
+    g.start_time = time.time()
+
+
+@app.after_request
+def log_request(response: Response) -> Response:
+    duration_ms = (time.time() - g.start_time) * 1000
+    ip: str = request.headers.get(
+        "X-Forwarded-For", request.remote_addr)  # type: ignore
+    try:
+        import geocoder
+        p = geocoder.ipinfo(ip)
+        country = p.country or ""
+        city = p.city or ""
+
+    except Exception as e:
+        traceback.print_tb(e.__traceback__)
+        country, city = "", ""
+    db = get_tracking_db()
+    db.execute(
+        "INSERT INTO usage (ts, endpoint, method, ip, user_agent, status_code, duration_ms, country, city) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            datetime.datetime.now().isoformat(),
+            request.path,
+            request.method,
+            ip,
+            request.headers.get("User-Agent"),
+            response.status_code,
+            duration_ms,
+            country,
+            city
+        )
+    )
+    db.commit()
+    return response
 
 
 if __name__ == "__main__":

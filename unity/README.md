@@ -8,11 +8,13 @@ This section of the project supports an effort to get a live SGP4 based model wo
 
 Use the existing toolkit to generate intemediate values and combine metadata to provide a coherent API with all the data required for an external app to run.
 
-The api pre-computes and caches the relevent data api responses based on SpaceTrak datasets and using sqlite3. The api responses can either be pre-computer in advance or computed and cached live as they're called
+The api pre-computes and caches the relevent data api responses based on SpaceTrak datasets and using sqlite3. The api responses can either be pre-computer in advance or computed and cached live as they're called.
 
 ### API
 
 The API uses a cross-platform WGSI compatible server called waitress to server the API build with Flask. The API supports gzip compression and will use it if you're client does too. It's recommended to use this to keep the responses sizes managible (uncompressed can be as large as 50MB, compressed is usually 1-4MB depending on options).
+
+The API also logs all requests to a sqlite3 database. These can be view via [this script](analyse_tracking.py) or directly by querying the database with the sqlite3 console.
 
 #### Options
 
@@ -97,3 +99,4 @@ The following code has been developed to support the api
 
 * [API](app.py)
 * [API cache update](update_cache.py)
+* [API tracking data overview script](analyse_tracking.py)
