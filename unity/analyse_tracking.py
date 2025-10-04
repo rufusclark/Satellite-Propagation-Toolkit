@@ -13,8 +13,7 @@ if __name__ == "__main__":
         print(
             tabulate(
                 get_traffic_analysis(),
-                headers=["Country", "City", "Unique Users",
-                         "Requests", "Avg Response (ms)"],
+                headers=["Day", "Api Calls", "Avg Response (ms)"],
                 tablefmt="grid"
             )
         )

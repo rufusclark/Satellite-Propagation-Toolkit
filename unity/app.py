@@ -38,6 +38,7 @@ TRACKING_DATABASE = "./data/api_tracking.db"
 CACHE_CHECK_DURATION = 15
 PRE_CACHE_DURATION = 2  # days - cache this many days into the future [1, 7]
 CACHE_TTL = 7  # days - how long a cache remains valid for [0, 14]
+log_ips = False  # whether to log IP addresses in the tracking database - consider privacy implications
 
 
 # key value pair for selecting the appropriate model for satellite sets
@@ -78,17 +79,21 @@ def get_tracking_db() -> sqlite3.Connection:  # type: ignore
         g.tracking_db = sqlite3.connect(TRACKING_DATABASE)
         g.tracking_db.execute("""
             CREATE TABLE IF NOT EXISTS usage (
-                     ts TEXT,
-                     endpoint TEXT,
-                     method TEXT,
-                     ip TEXT,
-                     user_agent TEXT,
-                     status_code INTEGER,
-                     duration_ms REAL,
-                     country TEXT,
-                     city TEXT
+                    ts TEXT,
+                    endpoint TEXT,
+                    method TEXT,
+                    ip TEXT,
+                    user_agent TEXT,
+                    status_code INTEGER,
+                    duration_ms REAL,
+                    country TEXT,
+                    city TEXT
                 )
         """)
+        if not log_ips:
+            g.tracking_db.execute(
+                "UPDATE usage SET ip = NULL, user_agent = NULL")
+            g.tracking_db.commit()
         print(f"Connected to {TRACKING_DATABASE}")
     return g.tracking_db
 
@@ -238,11 +243,22 @@ def get_traffic_analysis() -> list:
     """get analysis of tracking data from the tracking database"""
     db = get_tracking_db()
     c = db.cursor()
+    # depreciated - kept for reference
+    # c.execute("""
+    #     SELECT country, city, COUNT(DISTINCT ip || '|' || user_agent) AS unique_users, COUNT(*) as requests, AVG(duration_ms) AS avg_response_ms
+    #     FROM USAGE
+    #     GROUP BY country, city
+    #     ORDER BY requests DESC
+    # """)
     c.execute("""
-        SELECT country, city, COUNT(DISTINCT ip || '|' || user_agent) AS unique_users, COUNT(*) as requests, AVG(duration_ms) AS avg_response_ms
-        FROM USAGE
-        GROUP BY country, city
-        ORDER BY requests DESC
+        SELECT 
+            DATE(ts) AS day,
+            COUNT(*) AS api_calls,
+            AVG(duration_ms) AS avg_response_time_ms
+        FROM usage
+        WHERE ts >= DATE('now', '-6 months')
+        GROUP BY day
+        ORDER BY day
     """)
     rows = c.fetchall()
     return rows
@@ -300,12 +316,17 @@ def traffic():
     if not key or not check_password_hash("scrypt:32768:8:1$ypqYQqVluJUgi2W3$60d2e133a7d9080c9c6f57d27a419ae1a29c261d9969afa67bd626a35a3733e0466bde91617e765569696dda1f2c66dd930801767db973d73f511b8658ee64ea", key):
         return jsonify({"error": "Unauthorised"}), 401
 
+    # data = [{
+    #     "country": row[0],
+    #     "city": row[1],
+    #     "unique users": row[2],
+    #     "requests": row[3],
+    #     "avg response [ms]": row[4]
+    # } for row in get_traffic_analysis()]
     data = [{
-        "country": row[0],
-        "city": row[1],
-        "unique users": row[2],
-        "requests": row[3],
-        "avg response [ms]": row[4]
+        "day": row[0],
+        "api calls": row[1],
+        "avg response time [ms]": row[2]
     } for row in get_traffic_analysis()]
     return jsonify(data), 200
 
@@ -327,17 +348,23 @@ def start_time():
 @app.after_request
 def log_request(response: Response) -> Response:
     duration_ms = (time.time() - g.start_time) * 1000
-    ip: str = request.headers.get(
-        "X-Forwarded-For", request.remote_addr)  # type: ignore
-    try:
-        import geocoder
-        p = geocoder.ipinfo(ip)
-        country = p.country or ""
-        city = p.city or ""
+    if log_ips:
+        user_agent = request.headers.get("User-Agent", "")
+        ip: str = request.headers.get(
+            "X-Forwarded-For", request.remote_addr)  # type: ignore
+        try:
+            import geocoder
+            p = geocoder.ipinfo(ip)
+            country = p.country or ""
+            city = p.city or ""
 
-    except Exception as e:
-        traceback.print_tb(e.__traceback__)
+        except Exception as e:
+            traceback.print_tb(e.__traceback__)
+            country, city = "", ""
+    else:
+        ip = ""
         country, city = "", ""
+        user_agent = ""
     db = get_tracking_db()
     db.execute(
         "INSERT INTO usage (ts, endpoint, method, ip, user_agent, status_code, duration_ms, country, city) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -346,7 +373,7 @@ def log_request(response: Response) -> Response:
             request.path,
             request.method,
             ip,
-            request.headers.get("User-Agent"),
+            user_agent,
             response.status_code,
             duration_ms,
             country,
