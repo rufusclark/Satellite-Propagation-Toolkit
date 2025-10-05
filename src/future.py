@@ -125,7 +125,7 @@ class OrbitalCapacity:
         # create new satellite objects
         sats = [
             Satellite.from_orbital_elements(
-                name=f"{self.years:.0f}SAT{i:06}",
+                name=f"{self.years:.0f}SAT-{i:06}",
                 eccentricity=eccentricities[i],
                 argument_of_perigee=argument_of_perigee[i],
                 inclination=inclination[i],
