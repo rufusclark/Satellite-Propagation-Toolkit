@@ -122,7 +122,23 @@ class OrbitalPosition:
         )
 
     def is_leo(self) -> bool:
-        return self.geo.alt < 2000
+        return (
+            self.geo.alt < 2000
+            and self.sat.eccentricity < 0.05
+        )
+
+    def is_meo(self) -> bool:
+        GEO_ALT = 35786
+        return (
+            self.geo.alt >= 2000
+            and self.geo.alt < GEO_ALT - 500
+            and self.sat.eccentricity < 0.05
+        )
+
+    def is_heo(self) -> bool:
+        return (
+            self.sat.eccentricity >= 0.5
+        )
 
     def _calculate_osculating_elements(self) -> None:
         """calculate osculating elements from existing GCRS position"""

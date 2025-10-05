@@ -40,6 +40,7 @@ class Satellite:
         self._launch_date = None
         self._launch_site = None
         self._launch_country = None
+        self._owner_country = None
 
     @classmethod
     def from_tle(cls, fields, group: str = "", category: str = "") -> Self:
@@ -168,6 +169,20 @@ class Satellite:
         ]
 
     @property
+    def constellation(self) -> str:
+        """return the constellation extracted from the name if it exists"""
+        try:
+            # strip constellation from name
+            constellation = self.name.upper().split("-")[0].split(" ")[0]
+            # ignore if constellation is just a number - probably the launch year
+            if constellation.isdigit():
+                return ""
+            return constellation
+        except Exception as e:
+            print(e)
+            return ""
+
+    @property
     def object_type(self) -> str | None:
         return self._object_type
 
@@ -203,6 +218,11 @@ class Satellite:
     @property
     def launch_site(self) -> str | None:
         return self._launch_site
+
+    @property
+    def owner_country(self) -> List[str] | None:
+        """this represents the owner countries not the launch country, although they may be the same"""
+        return self._owner_country
 
     @property
     def launch_country(self) -> str | None:
@@ -396,6 +416,9 @@ class Satellite:
         if data['OWNER']:
             self._owner = SATCAT.OWNER(data["OWNER"])
             self.add_tag(self._owner)
+        else:
+            self._owner = ""
+        self._owner_country = SATCAT.COUNTRY(self._owner)
 
         if data['LAUNCH_DATE']:
             self._launch_date = datetime.strptime(

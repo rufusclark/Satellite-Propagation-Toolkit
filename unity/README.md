@@ -32,7 +32,13 @@ Additional MOCAT datasets can be integrated with this API by adding the filepath
 * Route (/) - returns device status in json
 
 ```json
-{"status":"healthy"}
+{
+  "cache": {
+    "cache_expire_time": "2025-10-11T23:11:48.919772",
+    "cache_status": "valid"
+  },
+  "status": "healthy"
+}
 ```
 
 * Sats options (/sats/options) - returns all available options for calling the /sats endpoint
@@ -58,28 +64,28 @@ Additional MOCAT datasets can be integrated with this API by adding the filepath
 ```json
 /sats?model=future&year=15&format=keplerian
 [
-    {"name": "15SAT049388", "category": "15 year estimate", "a": 8346.896424931907, "e": 0.001736118002734481, "i": 1.0160988826244386, "Omega": 0.10866763962377365, "omega": 1.5666989006817706, "M_0": 4.397443229119363, "t_0": "2025-09-05T10:01:17Z", "theta_g0": 2.3577270682856124}, 
-    {"name": "15SAT049389", "category": "15 year estimate", "a": 8365.513610100843, "e": 0.0014779336768586356, "i": 0.7542348668276888, "Omega": 5.741827948541315, "omega": 5.224138250979253, "M_0": 1.3661413939026077, "t_0": "2025-09-05T10:01:17Z", "theta_g0": 2.3577270682856124}, 
-    {"name": "15SAT049390", "category": "15 year estimate", "a": 8331.491697715359, "e": 0.0003659220573104625, "i": 1.2300409957606209, "Omega": 4.437922974194369, "omega": 1.0028587037979515, "M_0": 5.580716666584325, "t_0": "2025-09-05T10:01:17Z", "theta_g0": 2.3577270682856124},
-    ...
-    ]
+  {"name": "15SAT046099", "category": "15 year estimate", "constellation": "15SAT046099", "orbit type": "LEO", "a": 8080.239351864671, "e": 0.002554218741210542, "i": 0.83575620657674, "Omega": 0.9347672604229559, "omega": 0.9794698843845798, "M_0": 3.312303303777852, "t_0": "2025-10-05T08:02:43Z", "theta_g0": 2.354994377080531},
+  {"name": "15SAT046100", "category": "15 year estimate", "constellation": "15SAT046100", "orbit type": "LEO", "a": 8106.008084273389, "e": 0.0034466540487576454, "i": 1.513134714143146, "Omega": 0.9005415383337549, "omega": 1.6808706020447912, "M_0": 3.0173565163393, "t_0": "2025-10-05T08:02:43Z", "theta_g0": 2.354994450421491},
+  {"name": "15SAT046101", "category": "15 year estimate", "constellation": "15SAT046101", "orbit type": "LEO", "a": 8104.336655609582, "e": 0.0012348891904784293, "i": 0.697819749827599, "Omega": 0.6925271463016947, "omega": 3.6530548954552278, "M_0": 5.539313606535149, "t_0": "2025-10-05T08:02:43Z", "theta_g0": 2.354994450421491},
+  ...
+]
 ```
 
 ```json
 /sats?model=live&format=cartesian
 [
-    {"name": "ZORKIY-2M 2", "category": "special-interest satellites", "launch date": "2024-02-29T00:00:00", "launch site": "Vostochny Cosmodrome, Russia", "launch country": "Russia", "object type": "Payload", "operational status": "Operational", "owner": "Commonwealth of Independent States (former USSR)", "tags": ["active"], "x": 525.8860764392999, "y": -6327.290981591794, "z": 2299.367906387115, "x_v": -1.2977248460078803, "y_v": -2.726327974053706, "z_v": -7.150719327872921, "e": 0.002470274703874417, "i": 1.6986359932624222, "t_0": "2025-09-05T09:53:10Z"},
-    {"name": "ZY-1 02D", "category": "communications satellites", "launch date": "2019-09-12T00:00:00", "launch site": "Taiyuan Space Center, PRC", "launch country": "PRC", "object type": "Payload", "operational status": "Operational", "owner": "People's Republic of China", "tags": ["active", "special-interest satellites", "satnogs"], "x": -235.9588993762882, "y": 1033.8658247030367, "z": 7065.28789245571, "x_v": 7.536367297838214, "y_v": 0.22224982904233054, "z_v": 0.21855714710465404, "e": 0.0006469732491046516, "i": 1.7149885059455523, "t_0": "2025-09-05T09:53:10Z"},
-    {"name": "ZY-1 02E", "category": "special-interest satellites", "launch date": "2021-12-26T00:00:00", "launch site": "Taiyuan Space Center, PRC", "launch country": "PRC", "object type": "Payload", "operational status": "Operational", "owner": "People's Republic of China", "tags": ["active"], "x": 530.1713946608418, "y": 1198.1295918869646, "z": 7023.151422881753, "x_v": 7.343697240908496, "y_v": 1.5249059893017864, "z_v": -0.8133455924603911, "e": 0.0005954324477519252, "i": 1.717324732250218, "t_0": "2025-09-05T09:53:10Z"},
-    ...
+  {"name": "STARLINK-5231", "category": "communications satellites", "launch date": "2022-10-28T00:00:00", "launch site": "Air Force Western Test Range, California, USA", "launch country": "USA", "object type": "Payload", "operational status": "Operational", "owner": "United States", "owner country": ["United States"], "constellation": "STARLINK", "orbit type": "LEO", "tags": ["active", "special-interest satellites", "starlink"], "x": 1688.8382881621626, "y": 3964.5141990258107, "z": -5419.292883623484, "x_v": -7.05491141767584, "y_v": 1.255399569639014, "z_v": -1.2813493646103402, "e": 0.0016256475241144647, "i": 0.9265915714952896, "t_0": "2025-10-05T08:00:46Z"}, 
+  {"name": "STARLINK-5232", "category": "communications satellites", "launch date": "2023-02-17T00:00:00", "launch site": "Air Force Western Test Range, California, USA", "launch country": "USA", "object type": "Payload", "operational status": "Operational", "owner": "United States", "owner country": ["United States"], "constellation": "STARLINK", "orbit type": "LEO", "tags": ["active", "special-interest satellites", "starlink"], "x": -3480.452895924343, "y": -5991.708039819796, "z": 558.2184646647255, "x_v": 1.5191968385434889, "y_v": -1.5500231998234957, "z_v": -7.09207316308471, "e": 0.0010305827641009378, "i": 1.2213212568538965, "t_0": "2025-10-05T08:00:46Z"}, 
+  {"name": "STARLINK-5233", "category": "communications satellites", "launch date": "2022-10-28T00:00:00", "launch site": "Air Force Western Test Range, California, USA", "launch country": "USA", "object type": "Payload", "operational status": "Operational", "owner": "United States", "owner country": ["United States"], "constellation": "STARLINK", "orbit type": "LEO", "tags": ["active", "special-interest satellites", "starlink"], "x": -3412.32532446202, "y": -3312.1705289323354, "z": 5014.530724215567, "x_v": 6.313411533982897, "y_v": -2.6032663990969422, "z_v": 2.5697612111436525, "e": 0.0008210588752918982, "i": 0.9265628284037115, "t_0": "2025-10-05T08:00:46Z"},
+  ...
 ]
 ```
 
 #### Usage
 
-To host the API get started by cloning the repo and installing the Python requirements (see [README](../README.md) this detailed instructions). Then from the repositries root directory in 2 seperate terminals start the API server and response caching scripts. It is possible to just use the API server although this will result in slow responses that have not been cached (up to 10 seconds on a fast internet connection).
+To host the API get started by cloning the repo and installing the Python requirements (see [README](../README.md) this detailed instructions). Then from the repositories root directory in 2 separate terminals start the API server and response caching scripts. It is possible to just use the API server although this will result in slow responses that have not been cached (up to 10 seconds on a fast internet connection).
 
-Expect the first run to be very slow as all the data is downloaded and proccessed in the background.
+Expect the first run to be very slow as all the data is downloaded and processed in the background.
 
 ```bash
 waitress-serve --port=8000 unity.app:app

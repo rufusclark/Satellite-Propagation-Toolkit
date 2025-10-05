@@ -178,6 +178,9 @@ def get_output(
             "object type": position.sat.object_type,
             "operational status": position.sat.operational_status,
             "owner": position.sat.owner,
+            "owner country": position.sat.owner_country,
+            "constellation": position.sat.constellation,
+            "orbit type": position.is_leo() and "LEO" or position.is_meo() and "MEO" or position.is_geo() and "GEO" or position.is_heo() and "HEO" or "",
             "tags": [tag for tag in position.sat.tags if tag.lower() not in [position.sat.category.lower(), (position.sat.operational_status or "").lower(), (position.sat.launch_site or "").lower(), (position.sat.launch_country or "").lower(), (position.sat.object_type or "").lower(), (position.sat.owner or "").lower(), ""]],
             **({
                 "a": position.semi_major_axis,
@@ -271,7 +274,30 @@ with app.app_context():
 
 @app.route("/")
 def root():
-    return jsonify({"status": "healthy"}), 200
+    """return basic api status including cache status"""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT MAX(expire_unix) FROM cache")
+        max_expire_unix = cur.fetchone()[0]
+        if max_expire_unix is not None:
+            cache_expire_time = datetime.datetime.fromtimestamp(
+                max_expire_unix).isoformat()
+            cache_status = "valid" if max_expire_unix > time.time() else "expired"
+    except Exception as e:
+        traceback.print_tb(e.__traceback__)
+        # TODO: handle errors more usefully
+        max_expire_unix = None
+        cache_expire_time = "unknown"
+        cache_status = "unknown"
+
+    return jsonify({
+        "status": "healthy" if cache_status != "expired" else "degraded",
+        "cache": {
+            "cache_expire_time": cache_expire_time,
+            "cache_status": cache_status,
+        },
+    }), 200
 
 
 @app.route("/sats/options", methods=["GET"])

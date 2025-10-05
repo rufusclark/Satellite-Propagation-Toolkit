@@ -356,6 +356,127 @@ class SATCAT:
             return lookup_table[orbit_type]
         return ""
 
+    @classmethod
+    def COUNTRY(cls, owner: str) -> list[str]:
+        """returns the country from internal lookup table
+
+        Args:
+            owner: string code from SATCAT
+        """
+        lookup_table = {
+            'Asia Broadcast Satellite': ['Hong Kong'],
+            'Saudi Arabia': ['Saudi Arabia'],
+            'Kazakhstan': ['Kazakhstan'],
+            'Slovenia': ['Slovenia'],
+            'European Telecommunications Satellite Organization (EUTELSAT)': ['France'],
+            'Nigeria': ['Nigeria'],
+            'Belarus': ['Belarus'],
+            'Israel': ['Israel'],
+            'Finland': ['Finland'],
+            'Singapore/Taiwan': ['Singapore', 'Taiwan'],
+            'Colombia': ['Colombia'],
+            'RascomStar-QAF': ['Côte d’Ivoire'],
+            'Japan': ['Japan'],
+            'Australia': ['Australia'],
+            'Singapore': ['Singapore'],
+            'France': ['France'],
+            'Philippines': ['Philippines'],
+            'Portugal': ['Portugal'],
+            'Czech Republic': ['Czech Republic'],
+            'Sweden': ['Sweden'],
+            'Djibouti': ['Djibouti'],
+            'Pakistan': ['Pakistan'],
+            'China/Brazil': ['China', 'Brazil'],
+            'United States': ['United States'],
+            'Bulgaria': ['Bulgaria'],
+            'Hungary': ['Hungary'],
+            'Luxembourg': ['Luxembourg'],
+            'SES': ['Luxembourg'],
+            'Arab Satellite Communications Organization': [
+                'Saudi Arabia', 'Algeria', 'Bahrain', 'Egypt', 'Iraq', 'Jordan',
+                'Kuwait', 'Lebanon', 'Libya', 'Mauritania', 'Morocco', 'Oman',
+                'Palestine', 'Qatar', 'Sudan', 'Syria', 'Tunisia', 'United Arab Emirates', 'Yemen'
+            ],
+            'Lithuania': ['Lithuania'],
+            'Malaysia': ['Malaysia'],
+            'New Zealand': ['New Zealand'],
+            'South Korea': ['South Korea'],
+            'International Space Station': [
+                'United States', 'Russia', 'Japan', 'Canada', 'France', 'Germany', 'Italy', 'United Kingdom'
+            ],
+            'Bangladesh': ['Bangladesh'],
+            'North Korea': ['North Korea'],
+            'Brazil': ['Brazil'],
+            'Vietnam': ['Vietnam'],
+            'Egypt': ['Egypt'],
+            'Turkmenistan/Monaco': ['Turkmenistan', 'Monaco'],
+            'Ukraine': ['Ukraine'],
+            'Rwanda': ['Rwanda'],
+            'Argentina': ['Argentina'],
+            'Morocco': ['Morocco'],
+            'Turkey': ['Turkey'],
+            'Ethiopia': ['Ethiopia'],
+            'China': ['China'],
+            'Azerbaijan': ['Azerbaijan'],
+            'Indonesia': ['Indonesia'],
+            'Angola': ['Angola'],
+            'United Arab Emirates': ['United Arab Emirates'],
+            'Estonia': ['Estonia'],
+            'Norway': ['Norway'],
+            'Iraq': ['Iraq'],
+            'Canada': ['Canada'],
+            'Thailand': ['Thailand'],
+            'South Africa': ['South Africa'],
+            'Taiwan': ['Taiwan'],
+            'Denmark': ['Denmark'],
+            'Laos': ['Laos'],
+            'Netherlands': ['Netherlands'],
+            'Peru': ['Peru'],
+            'International Mobile Satellite Organization (INMARSAT)': ['United Kingdom'],
+            'Iran': ['Iran'],
+            'United Kingdom': ['United Kingdom'],
+            'Greece': ['Greece'],
+            'Zimbabwe': ['Zimbabwe'],
+            'Mexico': ['Mexico'],
+            'Germany': ['Germany'],
+            'International Telecommunications Satellite Organization (INTELSAT)': [
+                'United States', 'United Kingdom', 'France', 'Germany', 'Japan', 'Brazil'
+            ],
+            'Greece/Saudi Arabia': ['Greece', 'Saudi Arabia'],
+            'Algeria': ['Algeria'],
+            'Commonwealth of Independent States': [
+                'Armenia', 'Azerbaijan', 'Belarus', 'Kazakhstan', 'Kyrgyzstan',
+                'Moldova', 'Russia', 'Tajikistan', 'Uzbekistan'
+            ],
+            'India': ['India'],
+            'Poland': ['Poland'],
+            'Bolivia': ['Bolivia'],
+            'France/Italy': ['France', 'Italy'],
+            'Switzerland': ['Switzerland'],
+            'O3b Networks': ['Luxembourg'],
+            'New ICO': ['United Kingdom'],
+            'Venezuela': ['Venezuela'],
+            'Globalstar': ['United States'],
+            'European Organization for the Exploitation of Meteorological Satellites (EUMETSAT)': ['Germany'],
+            'ORBCOMM': ['United States'],
+            'Ecuador': ['Ecuador'],
+            'European Space Agency': [
+                'Austria', 'Belgium', 'Czech Republic', 'Denmark', 'Estonia', 'Finland', 'France',
+                'Germany', 'Greece', 'Hungary', 'Ireland', 'Italy', 'Luxembourg', 'Netherlands',
+                'Norway', 'Poland', 'Portugal', 'Romania', 'Spain', 'Sweden', 'Switzerland',
+                'United Kingdom'
+            ],
+            'Asia Satellite Telecommunications Company (ASIASAT)': ['Hong Kong'],
+            'Belgium': ['Belgium'],
+            'Italy': ['Italy'],
+            'Spain': ['Spain'],
+            'Austria': ['Austria'],
+            'Chile': ['Chile']
+        }
+        if owner in lookup_table:
+            return lookup_table[owner]
+        return [""]
+
 
 @functools.lru_cache(1)
 def init_sats() -> SatelliteSet:
