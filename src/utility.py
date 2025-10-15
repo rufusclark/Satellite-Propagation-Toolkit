@@ -1,18 +1,14 @@
 """contains useful utilities"""
-from typing import Literal, Optional
+from typing import Literal
 
 from skyfield.toposlib import GeographicPosition
 from skyfield.api import utc, wgs84
 from src import *
-from .projection import BaseProjection
-from .models import Satellite
 import datetime
 import time
-import random
-import string
-import pathlib
-import shutil
+import traceback
 import sys
+from functools import lru_cache
 
 
 class ProgressBar:
@@ -41,14 +37,21 @@ class ProgressBar:
             sys.stdout.flush()
 
 
+@lru_cache(maxsize=1)
 def get_estimated_latlon() -> GeographicPosition:
     """return a skyfield GeographicPosition of your estimated location using ip information
 
     Returns:
         GeographicPosition
     """
-    import geocoder
-    return wgs84.latlon(*geocoder.ip('me').latlng)
+    try:
+        import geocoder
+        return wgs84.latlon(*geocoder.ip('me').latlng)
+    except Exception as e:
+        print("Could not get location from ip, defaulting to 0,0")
+        traceback.print_tb(e.__traceback__)
+        print("Continuing...")
+        return wgs84.latlon(0, 0)
 
 
 SUPPORTED_DEVICES = Literal[

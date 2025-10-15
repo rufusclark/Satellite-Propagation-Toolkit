@@ -286,6 +286,7 @@ def root():
             cache_status = "valid" if max_expire_unix > time.time() else "expired"
     except Exception as e:
         traceback.print_tb(e.__traceback__)
+        print("Continuing...")
         # TODO: handle errors more usefully
         max_expire_unix = None
         cache_expire_time = "unknown"
@@ -360,6 +361,7 @@ def traffic():
 @app.errorhandler(Exception)
 def handle_exception(e):
     traceback.print_tb(e.__traceback__)
+    print("Continuing...")
     if app.debug:
         return jsonify({"error": str(e)}), 500
     else:
@@ -386,6 +388,7 @@ def log_request(response: Response) -> Response:
 
         except Exception as e:
             traceback.print_tb(e.__traceback__)
+            print("Continuing...")
             country, city = "", ""
     else:
         ip = ""
