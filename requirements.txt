@@ -14,3 +14,4 @@ waitress
 matplotlib
 numpy
 tabulate
+scipy

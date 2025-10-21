@@ -99,6 +99,25 @@ class OrbitalPosition:
             self._calculate_osculating_elements()
         return self._n  # type: ignore
 
+    @property
+    def perigee(self) -> float:
+        """perigee altitude [km]"""
+        return self.a * (1 - self.e) - 6371.0  # Earth radius approx
+
+    @property
+    def apogee(self) -> float:
+        """apogee altitude [km]"""
+        return self.a * (1 + self.e) - 6371.0  # Earth radius approx
+
+    @property
+    def flux_debris_density(self) -> float:
+        """debris flux density [#/m²/year]
+
+        This is a placeholder value and should be replaced with a proper calculation based on orbital parameters and debris environment models.
+        """
+        from .debris import debrisFluxDataset
+        return debrisFluxDataset.estimate_flux(self)
+
     semi_major_axis = a
     eccentricity = e
     inclination = i

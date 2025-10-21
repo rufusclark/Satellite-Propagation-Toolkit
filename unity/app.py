@@ -167,7 +167,7 @@ def get_output(
     positions = SGP4Propagation().propagate(sats, ts.now())
 
     # !: TLE/SGP4 is not currently supported
-    # generate the output based on the foramt
+    # generate the output based on the format
     out = [
         {
             "name": position.sat.name,
