@@ -47,8 +47,12 @@ Insert more MOCAT model files with keys here to expose them via the API
 """
 MODEL_FILES = {
     "live": "live",
-    "initial orbital capacity": "./data/MOCAT/initial orbital capacity.csv"
+    "initial orbital capacity": "./data/MOCAT/initial orbital capacity.csv",
+    "no new launches": "./data/MOCAT/results_Su_no_launch_2025.csv",
+    "medium launch rate": "./data/MOCAT/results_Su_median_launch_2025.csv",
+    "max launch rate": "./data/MOCAT/results_Su_max_launch_2025.csv"
 }
+
 """
 Insert more MOCAT model files above
 """
@@ -70,7 +74,7 @@ def get_db() -> sqlite3.Connection:  # type: ignore
                      data TEXT
                 )
         """)
-        print(f"Connected to {DATABASE}")
+        # print(f"Connected to {DATABASE}")
     return g.db
 
 
@@ -94,7 +98,7 @@ def get_tracking_db() -> sqlite3.Connection:  # type: ignore
             g.tracking_db.execute(
                 "UPDATE usage SET ip = NULL, user_agent = NULL")
             g.tracking_db.commit()
-        print(f"Connected to {TRACKING_DATABASE}")
+        # print(f"Connected to {TRACKING_DATABASE}")
     return g.tracking_db
 
 
@@ -103,7 +107,12 @@ def close_db(exception):
     db = g.pop("db", None)
     if db:
         db.close()
-        print(f"Closed connection to {DATABASE}")
+        # print(f"Closed connection to {DATABASE}")
+
+    tracking_db = g.pop("tracking_db", None)
+    if tracking_db:
+        tracking_db.close()
+        # print(f"Closed connection to {TRACKING_DATABASE}")
 
 
 def get_output(
@@ -134,7 +143,7 @@ def get_output(
 
     # redirect future to a specific dataset
     if model == "future":
-        model = "initial orbital capacity"
+        model = "medium launch rate"
 
     # input validation
     if format not in FORMATS or model not in MODELS:
@@ -148,10 +157,11 @@ def get_output(
     db = get_db()
     row = db.execute(
         "SELECT data FROM cache WHERE year = ? AND format = ? AND model = ? AND expire_unix > ?", (years, format, model, _current_time)).fetchone()
-    print(f"{years=} {format=} {model=} cached={row is not None}")
+    print(
+        f"[{datetime.datetime.now()}] sats request {years=} {format=} {model=} served-cached-response={row is not None}")
     if row:
         # return cached response
-        print(f"Returned response from cache")
+        # print(f"Returned response from cache")
         return Response(row[0].encode("utf-8"), content_type="application/json")
 
     # compute as not cached
@@ -224,7 +234,7 @@ def get_output(
     db.execute("INSERT OR REPLACE INTO cache (year, format, model, expire_unix, data) VALUES (?, ?, ?, ?, ?)",
                (years, format, model, time.time()+60*60*24*CACHE_TTL, json_out))
     db.commit()
-    print(f"Cached response")
+    # print(f"Response computed live and cached for future calls")
 
     return Response(json_out, content_type="application/json")
 
@@ -322,7 +332,7 @@ def sats():
     format = request.args.get("format", "keplerian")
     year = request.args.get("year", 0, type=float)
 
-    print(f"{model=} {format=} {year=}")
+    # print(f"{model=} {format=} {year=}")
 
     try:
         return get_output(

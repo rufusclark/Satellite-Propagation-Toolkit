@@ -14,10 +14,10 @@ from numpy.typing import NDArray
 
 # TODO: Add methods for quickly and easily plotting ground tracks and other data
 # TODO: Implement SatellitePositions
-# TODO: Implement propagation techiques
+# TODO: Implement propagation techniques
 # TODO: Test everything
 # TODO: Plug into the satellite download system
-# TODO: Add support for oscillating parametres (inclinations, etc)
+# TODO: Add support for oscillating parameters (inclinations, etc)
 
 
 class SGP4PropagationError(Exception):
@@ -26,7 +26,7 @@ class SGP4PropagationError(Exception):
 
 
 class OrbitalPosition:
-    """Represents a satellite at an instataneous time.
+    """Represents a satellite at an instantaneous time.
 
     Do not create this function directly.
 
@@ -110,13 +110,16 @@ class OrbitalPosition:
         return self.a * (1 + self.e) - 6371.0  # Earth radius approx
 
     @property
-    def flux_debris_density(self) -> float:
-        """debris flux density [#/m²/year]
-
-        This is a placeholder value and should be replaced with a proper calculation based on orbital parameters and debris environment models.
-        """
+    def max_flux_debris_density(self) -> float:
+        """estimate the maximum debris flux [#/m²/year] for this orbital position based on its orbital parameters estimated from TLE using the SPG4 model"""
         from .debris import debrisFluxDataset
-        return debrisFluxDataset.estimate_flux(self)
+        return debrisFluxDataset.estimate_max_flux(self)
+
+    @property
+    def avg_flux_debris_density(self) -> float:
+        """estimate the average debris flux [#/m²/year] for this orbital position based on its orbital parameters estimated from TLE using the SPG4 model"""
+        from .debris import debrisFluxDataset
+        return debrisFluxDataset.estimate_average_flux(self)
 
     semi_major_axis = a
     eccentricity = e

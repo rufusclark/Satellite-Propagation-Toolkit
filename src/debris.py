@@ -1,8 +1,14 @@
-"""The debris module contains classes and functions for estimating debris flux for each satellite based on orbital parameters and the ESA MASTER v8.0.5 dataset"""
+"""The debris module contains classes and functions for estimating debris flux for each satellite based on orbital parameters and the ESA MASTER v8.0.5 dataset
+
+Please note this only supports altitudes of 300-2000km"""
 
 from .models import Satellite
 from .propagation import SGP4Propagation, ts, OrbitalPosition
 import numpy as np
+
+
+class OutOfBoundError(Exception):
+    pass
 
 
 class DebrisFluxDataset:
@@ -41,7 +47,15 @@ class DebrisFluxDataset:
             method="linear"
         )
 
-    def estimate_flux(self, sat: Satellite | OrbitalPosition) -> float:
+    def interpolator(self, points):
+        """get the internal interpolator object"""
+        if (alt := np.max(points[:, 1])) > 2000 or np.min(points[:, 1]) < 300:
+            raise OutOfBoundError(
+                f"altitude ({alt:.2f}km) out of bounds, must be between 300km and 2000km"
+            )
+        return self._interpolator(points)
+
+    def estimate_max_flux(self, sat: Satellite | OrbitalPosition) -> float:
         """estimate the maximum debris flux [#/m²/year] for a given satellite based on its orbital parameters estimated from TLE using the SPG4 model
         """
         if isinstance(sat, Satellite):
@@ -49,17 +63,38 @@ class DebrisFluxDataset:
         else:
             position = sat
 
+        n = min(int(5 * (20 ** position.eccentricity)) +
+                10, 100)  # optimise for orbit eccentricity
         points = np.array(
             [
-                [sat.inclination, alt]
-                for alt in np.linspace(position.perigee, position.apogee, num=25)
+                [sat.inclination, alt]  # type: ignore
+                for alt in np.linspace(position.perigee, position.apogee, num=n)
             ]
         )
-        flux_points = self._interpolator(points)
+        flux_points = self.interpolator(points)
         return np.max(flux_points)  # type: ignore
 
+    def estimate_average_flux(self, sat: Satellite | OrbitalPosition) -> float:
+        """estimate the average debris flux [#/m²/year] for a given satellite based on its orbital parameters estimated from TLE using the SPG4 model
+        """
+        if isinstance(sat, Satellite):
+            position = SGP4Propagation()._propagate(sat, ts.now())
+        else:
+            position = sat
+
+        n = min(int(5 * (20 ** position.eccentricity)) +
+                10, 100)  # optimise for orbit eccentricity
+        points = np.array(
+            [
+                [sat.inclination, alt]  # type: ignore
+                for alt in np.linspace(position.perigee, position.apogee, num=n)
+            ]
+        )
+        flux_points = self.interpolator(points)
+        return np.mean(flux_points)  # type: ignore
+
     def _estimate_flux(self, altitude: float, inclination: float) -> float:
-        return self._interpolator([inclination, altitude])[0]
+        return self.interpolator([inclination, altitude])[0]
 
 
 debrisFluxDataset = DebrisFluxDataset(
