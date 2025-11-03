@@ -11,7 +11,7 @@ class OutOfBoundError(Exception):
     pass
 
 
-class DebrisFluxDataset:
+class _DebrisFluxDataset:
     """Singleton class representing the debris flux dataset from ESA MASTER v8.0.5"""
     _instance = None
 
@@ -41,6 +41,35 @@ class DebrisFluxDataset:
         # extract flux data
         flux_data = data[1:, 1:]
 
+        # TODO: Compute the gradient of altitude vs flux for each inclination (excluding LEO,GEO,MEO,GSO regions) as an approximation for high altitude flux density - then amend an appropriate data point onto the end of the dataset at h=1,000,000km
+
+        # extrapolate high altitude flux data linearly based on post-GSO data
+        upper_bound = 37200  # km
+        if altitude_axis[-1] > upper_bound:
+            # get the index of first post target altitude
+            upper_bound_index = np.argmax(altitude_axis < upper_bound)
+
+            # extract data
+            interpolation_data = data[:, [upper_bound_index, -1]]
+            interpolation_altitudes = altitude_axis[[upper_bound_index, -1]]
+
+            # linear interpolation along each row
+            interpolated_altitude = 1000000  # km
+            interpolated_data = np.array([
+                np.interp(interpolated_altitude, interpolation_altitudes, interpolation_data[i]) for i in range(interpolation_data.shape[0])
+            ])
+
+            # extend existing dataset
+            altitude_axis = np.append(altitude_axis, interpolated_altitude)
+            flux_data = np.column_stack((flux_data, interpolated_data[1:]))
+
+            # print(f"{flux_data=}")
+
+        # cache bounds
+        self._altitude_min = altitude_axis[0]
+        self._altitude_max = altitude_axis[-1]
+
+        # create interpolator
         self._interpolator = RegularGridInterpolator(
             (inclination_axis, altitude_axis),
             flux_data,
@@ -49,9 +78,11 @@ class DebrisFluxDataset:
 
     def interpolator(self, points):
         """get the internal interpolator object"""
-        if (alt := np.max(points[:, 1])) > 2000 or np.min(points[:, 1]) < 300:
+        # TODO: Estimate debris flux outside of upper bound - potentially add a final altitude at 1Mkm to the end of the dataset to allow effective interpolation out to a crazy high altitude?
+
+        if (alt := np.max(points[:, 1])) > self._altitude_max or np.min(points[:, 1]) < self._altitude_min:
             raise OutOfBoundError(
-                f"altitude ({alt:.2f}km) out of bounds, must be between 300km and 2000km"
+                f"altitude ({alt:.2f}km) out of bounds, must be between {self._altitude_min:.1f}km and {self._altitude_max:.1f}m"
             )
         return self._interpolator(points)
 
@@ -97,5 +128,5 @@ class DebrisFluxDataset:
         return self.interpolator([inclination, altitude])[0]
 
 
-debrisFluxDataset = DebrisFluxDataset(
-    "./data/MASTER/debris flux data sheet.csv")
+debrisFluxDataset = _DebrisFluxDataset(
+    "./data/MASTER/debris flux data sheet (200-40000km).csv")
