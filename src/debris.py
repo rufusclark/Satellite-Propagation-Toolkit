@@ -1,6 +1,6 @@
-"""The debris module contains classes and functions for estimating debris flux for each satellite based on orbital parameters and the ESA MASTER v8.0.5 dataset
+"""The debris module contains classes and functions for estimating debris flux for each satellite based on orbital parameters and the ESA MASTER v8.0.5 dataset (Flux of debris [# m^-2 yr^-1] vs Altitude [km] and Inclination [deg] year of reference: 2024 - size threshold: >1cm - MASTER-8.0.5)
 
-Please note this only supports altitudes of 300-2000km"""
+Please note this only supports altitudes of 200-1000000km"""
 
 from .models import Satellite
 from .propagation import SGP4Propagation, ts, OrbitalPosition
@@ -41,8 +41,6 @@ class _DebrisFluxDataset:
         # extract flux data
         flux_data = data[1:, 1:]
 
-        # TODO: Compute the gradient of altitude vs flux for each inclination (excluding LEO,GEO,MEO,GSO regions) as an approximation for high altitude flux density - then amend an appropriate data point onto the end of the dataset at h=1,000,000km
-
         # extrapolate high altitude flux data linearly based on post-GSO data
         upper_bound = 37200  # km
         if altitude_axis[-1] > upper_bound:
@@ -62,8 +60,6 @@ class _DebrisFluxDataset:
             # extend existing dataset
             altitude_axis = np.append(altitude_axis, interpolated_altitude)
             flux_data = np.column_stack((flux_data, interpolated_data[1:]))
-
-            # print(f"{flux_data=}")
 
         # cache bounds
         self._altitude_min = altitude_axis[0]
