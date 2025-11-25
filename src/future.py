@@ -14,7 +14,6 @@ import csv
 from math import isnan
 
 import numpy as np
-from pprint import pprint
 
 
 MU = 398600  # km^3/s^2, Earth Gravitational Parameter

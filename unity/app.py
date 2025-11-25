@@ -48,9 +48,8 @@ Insert more MOCAT model files with keys here to expose them via the API
 MODEL_FILES = {
     "live": "live",
     "initial orbital capacity": "./data/MOCAT/initial orbital capacity.csv",
-    "no new launches": "./data/MOCAT/results_Su_no_launch_2025.csv",
-    "medium launch rate": "./data/MOCAT/results_Su_median_launch_2025.csv",
-    "max launch rate": "./data/MOCAT/results_Su_max_launch_2025.csv"
+    "continue launch rate": "./data/MOCAT/results_Su_max_launch_2025.csv",
+    "predicted mega constellations": "./data/MOCAT/results_Su_predict_launch_mega_2025.csv"
 }
 
 """
@@ -143,7 +142,7 @@ def get_output(
 
     # redirect future to a specific dataset
     if model == "future":
-        model = "medium launch rate"
+        model = "predicted mega constellations"
 
     # input validation
     if format not in FORMATS or model not in MODELS:
