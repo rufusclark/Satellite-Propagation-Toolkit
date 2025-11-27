@@ -75,8 +75,8 @@ class OrbitalCapacity:
 
         total_capacity = sum(band.capacity for band in self.altitude_bands)
 
-        # (1) estimate uniformly distributed major-axis for each altitude band
-        semi_major_axes = np.clip(
+        # (1) estimate uniformly distributed semi minor-axis for each altitude band
+        semi_minor_axes = np.clip(
             np.concatenate(
                 [
                     np.random.uniform(band.low, band.high, band.capacity)
@@ -95,6 +95,11 @@ class OrbitalCapacity:
                  np.random.uniform(0, 0.001) for i in indices]
             ), 0, 1
         )
+
+        # (1.1) calculate equivalent semi major-axis
+        semi_major_axes = semi_minor_axes / np.sqrt(1 - eccentricities**2)
+
+        # (2) continued
         inclination = np.clip(
             np.array(
                 [training_orbital_positions[i].i +
