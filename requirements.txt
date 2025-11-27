@@ -15,3 +15,4 @@ matplotlib
 numpy
 tabulate
 scipy
+flask-limiter

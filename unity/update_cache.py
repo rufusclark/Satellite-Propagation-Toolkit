@@ -33,5 +33,6 @@ if __name__ == "__main__":
                 time.sleep(60*CACHE_CHECK_DURATION)
 
             except Exception as e:
+                print(e)
                 traceback.print_tb(e.__traceback__)
                 print("Continuing...")
