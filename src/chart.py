@@ -297,8 +297,8 @@ def _histogram(axes: "Axes", label: str, data: list[float]) -> "Axes":
     axes.hist(data, bins=100, log=True)
     axes.set_xlabel(label)
     axes.set_ylabel("frequency")
-    axes.set_title(f"{label.split(' [')[0]} histogram")
-    axes.grid(False)
+    axes.set_title(f"{label.split(' [')[0]}")
+    axes.grid(True)
     return axes
 
 

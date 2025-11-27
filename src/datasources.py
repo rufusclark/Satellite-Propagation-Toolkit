@@ -59,19 +59,41 @@ class NORAD:
         self.filetype = filetype
         self._sources_by_group = {}
 
+        # CelesTrak retry backoff
+        self.retry_number = 0
+        self.wait_until = 0
+
     def get_source_groups_from_celesTrak(self) -> None:
         """get the source groups from celesTrak and cache the data in a pickle"""
         import requests
+        import requests.exceptions
         from bs4 import BeautifulSoup
+        import time
 
         url = f"https://celestrak.org/NORAD/elements/index.php?FORMAT={self.filetype}"
         sources_by_group: Dict[str, NORADSource] = {}
 
-        # get webpage data and raise HTTPError is the response was unsuccessful
-        response = requests.get(url)
-        response.raise_for_status()
+        if self.wait_until > time.time():
+            raise TimeoutError(
+                f"Backing off request to CelesTrak after {self.retry_number} rejected requests for the next {self.wait_until - time.time()} seconds")
 
-        # parse html
+        try:
+            # get webpage data and raise HTTPError is the response was unsuccessful
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            self.retry_number = 0
+        except (requests.exceptions.RequestException, requests.exceptions.Timeout) as e:
+            # update backoff wait period
+            self.retry_number += 1
+
+            MAX_WAIT = 12 * 60 * 60  # 12 hours
+            BACKOFF_FACTOR = 4  # 4 seconds
+
+            backoff_period = min(
+                MAX_WAIT, BACKOFF_FACTOR * 2**(self.retry_number))
+            self.wait_until = time.time() + backoff_period
+
+            # parse html
         soup = BeautifulSoup(response.text, "html.parser")
 
         for table in soup.find_all('table', class_='striped'):
@@ -128,7 +150,7 @@ class NORAD:
             return
         except Exception as e:
             print(
-                f"Exception occurred whilst getting source groups from cache. This may be because the cache hasn't been created yet: {e}"
+                f"Exception occurred whilst getting source groups from cache. This may be because the cache hasn't been created yet: {e}\nContinuing as expected..."
             )
 
         try:
@@ -136,7 +158,7 @@ class NORAD:
             return
         except Exception as e:
             print(
-                f"Exception occurred whilst getting source groups from CelesTrak. This may be due to network issues: {e}"
+                f"Exception occurred whilst getting source groups from CelesTrak. This may be due to network issues: {e}\nContinuing as expected..."
             )
 
         try:

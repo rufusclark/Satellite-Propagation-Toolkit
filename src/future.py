@@ -182,6 +182,13 @@ class MOCATReader:
             reader = csv.reader(f)
             data = list(reader)
 
+        # Trim total row if it exists
+        try:
+            blank_column_idx = data[0].index("")
+            data = [row[:blank_column_idx] for row in data]
+        except ValueError:
+            pass
+
         # Get a list of all generated years
         modelled_years = [float(row[0]) for row in data[1:]]
 
@@ -190,11 +197,12 @@ class MOCATReader:
             modelled_years)), key=lambda x: abs(x[0] - target_year))
 
         # check to see if modelled year is similar to target year
-        error_threshold = 1.5
+        error_threshold = 2.5
         error = abs(year - target_year)
         if error > error_threshold:
-            raise Warning(
-                f"Target year ({target_year}) for MOCAT orbital capacity is greater than the error threshold of {error_threshold} years. Data is available between {min(modelled_years)} and {max(modelled_years)} years")
+            # fmt: off
+            raise Warning(f"Target year ({target_year}) for MOCAT orbital capacity is greater than the error threshold of {error_threshold} years. Data is available between {min(modelled_years)} and {max(modelled_years)} years")
+            # fmt: on
 
         # user output
         print(
@@ -202,7 +210,7 @@ class MOCATReader:
         )
 
         # generate OrbitalCapacity
-        # assume the within of each band is the same
+        # assume the width of each band is the same
 
         # read the relevent data from the data (CSV cached data)
         mid_altitudes = list(map(float, data[0][1:]))
