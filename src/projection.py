@@ -10,8 +10,7 @@ from .models import SatelliteSet, Satellite
 from .matrix import Matrix, ImageFrame
 from .analysis import BasePixelModifier, Modifiers
 from .propagation import OrbitalPosition
-
-EARTH_RADIUS = 6371  # [km] mean radius
+from .const import EARTH_RADIUS
 
 
 class FramePosition:

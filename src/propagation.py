@@ -5,8 +5,10 @@ from skyfield.framelib import itrs
 from skyfield.toposlib import GeographicPosition
 
 from .models import Satellite, SatelliteSet, ts
+from .const import EARTH_RADIUS
+from .utility import ACCEPTABLE_TIME_TYPES, accept_any_datetime
 
-from math import nan, isnan
+import math
 import datetime
 
 import numpy as np
@@ -21,7 +23,7 @@ from numpy.typing import NDArray
 
 
 class SGP4PropagationError(Exception):
-    """raised when SGP4 returns nan (invalid propagation)"""
+    """raised when SGP4 returns math.nan (invalid propagation)"""
     pass
 
 
@@ -32,10 +34,10 @@ class OrbitalPosition:
 
     This is generated from the propagation objects"""
 
-    def __init__(self, sat: Satellite, position: ICRF | None, time: Time) -> None:
+    def __init__(self, sat: Satellite, position: ICRF | None, time: ACCEPTABLE_TIME_TYPES) -> None:
         self.sat = sat
         self.gcrs_position = position
-        self.time = time
+        self.time = accept_any_datetime(time)
 
         # Alternate reference frames
         self.geo = self._Geocentric(self)
@@ -283,7 +285,7 @@ class OrbitalPosition:
         def cartesian_position_and_velocity(self) -> tuple[float, float, float, float, float, float]:
             """returns cartesian coordinates [km] and velocity [km/s]"""
             if not self.parent.gcrs_position:
-                return nan, nan, nan, nan, nan, nan
+                return math.nan, math.nan, math.nan, math.nan, math.nan, math.nan
 
             p, v = self.parent.gcrs_position.frame_xyz_and_velocity(itrs)
             self._x, self._y, self._z = p.km
@@ -293,7 +295,7 @@ class OrbitalPosition:
         def latitude_longitude_and_altitude(self) -> tuple[float, float, float]:
             """returns latitude [degrees], longitude [degrees] and altitude [km]"""
             if not self.parent.gcrs_position:
-                return nan, nan, nan
+                return math.nan, math.nan, math.nan
 
             geo_pos = wgs84.geographic_position_of(self.parent.gcrs_position)
             self._lat = geo_pos.latitude.degrees
@@ -301,6 +303,32 @@ class OrbitalPosition:
             self._alt = geo_pos.elevation.km
 
             return self._lat, self._lon, self._alt  # type: ignore
+
+        def swath_ground_radius(self, off_nadir_half_angle: float) -> float:
+            """return the ground radius (assuming a spherical Earth) of the satellite with a given off nadir half angle at it's current altitude. If the half angle points beyond the horizon this will return the ground radius to the horizon instead.
+
+            Args:
+                off_nadir_half_angle: [deg] angle from the nadir
+
+            Returns:
+                ground radius [km]
+            """
+            theta_rad = math.radians(off_nadir_half_angle)
+            altitude = self.alt
+
+            # ground distance half-angle (with out of domain asin handling)
+            try:
+                central_angle = math.asin(
+                    ((EARTH_RADIUS + altitude) / (EARTH_RADIUS)) * math.sin(theta_rad))
+                half_angle_ground_distance = EARTH_RADIUS * central_angle
+            except ValueError:
+                half_angle_ground_distance = 1e100
+
+            # ground distance to horizon
+            horizon_ground_distance = math.sqrt(
+                math.pow(EARTH_RADIUS + altitude, 2) - math.pow(EARTH_RADIUS, 2))
+
+            return min(half_angle_ground_distance, horizon_ground_distance)
 
         def to_dict(self) -> dict:
             return {
@@ -329,7 +357,7 @@ class OrbitalPosition:
         def altitude_azimuth_and_distance(self, observer: GeographicPosition) -> tuple[float, float, float]:
             """returns tha altitude [degrees], azimuth [degrees] and distance [km] from the observer"""
             if not self.parent.gcrs_position:
-                return nan, nan, nan
+                return math.nan, math.nan, math.nan
 
             diff = self.parent.gcrs_position - observer.at(self.parent.time)
             alt, azimuth, distance = diff.altaz()
@@ -370,12 +398,12 @@ class OrbitalPosition:
 
 
 class BasePropagation:
-    def error_estimate(self, time: Time) -> float:
+    def error_estimate(self, time: ACCEPTABLE_TIME_TYPES) -> float:
         # TODO: Implement or remove
         # ? Maybe
         raise NotImplementedError
 
-    def propagate(self, sat: Satellite | list[Satellite] | SatelliteSet, time: Time) -> list[OrbitalPosition]:
+    def propagate(self, sat: Satellite | list[Satellite] | SatelliteSet, time: ACCEPTABLE_TIME_TYPES) -> list[OrbitalPosition]:
         """estimate the satellite location
 
         Args:
@@ -392,19 +420,20 @@ class BasePropagation:
 
         return [self._propagate(item, time) for item in sat]
 
-    def _propagate(self, sat: Satellite, time: Time) -> OrbitalPosition:
-        """internal method without type checking and cohersion.
+    def _propagate(self, sat: Satellite, time: ACCEPTABLE_TIME_TYPES) -> OrbitalPosition:
+        """internal method without type checking and cohesion.
 
         This should be implemented by all child classes"""
         raise NotImplementedError
 
 
 class SGP4Propagation(BasePropagation):
-    """Propagation using the SGP4 (Special General Purtabations Model)
+    """Propagation using the SGP4 (Special General Perturbations Model)
 
     This is the most accurate propagation model for this dataset and is accurate for 2 weeks +/- epoch"""
 
-    def _propagate(self, sat: Satellite, time: Time) -> OrbitalPosition:
+    def _propagate(self, sat: Satellite, time: ACCEPTABLE_TIME_TYPES) -> OrbitalPosition:
+        time = accept_any_datetime(time)
         return OrbitalPosition(sat, sat._sat.at(time), time)
 
 
@@ -421,8 +450,9 @@ class KeplerianPropagation(BasePropagation):
         self._cached_orbital_positions: dict[int, OrbitalPosition] = {}
         self._cached_theta0: dict[int, float] = {}
 
-    def _propagate(self, sat: Satellite, time: Time) -> OrbitalPosition:
+    def _propagate(self, sat: Satellite, time: ACCEPTABLE_TIME_TYPES) -> OrbitalPosition:
         # get keplerian/oscilating elements using SGP4 propagation if they haven't been calculated
+        time = accept_any_datetime(time)
         if not (sat.id in self._cached_orbital_positions):
             p0 = SGP4Propagation()._propagate(
                 sat, time=time)
@@ -619,7 +649,7 @@ class CubicInterpolation(BasePropagation):
         for key, value in self._cached_values[sat.id].items():
             if key == "time":
                 continue
-            if isnan(value[0]):
+            if math.isnan(value[0]):
                 raise SGP4PropagationError(
                     f"{sat.id=}, {key=}, {value=}: value is invalid due to SGP4 propagation error")
             self._cubic_splines[sat.id][key] = CubicSpline(
@@ -666,7 +696,8 @@ class CubicInterpolation(BasePropagation):
         # 3. Calculate cubic splines
         pass
 
-    def _propagate(self, sat: Satellite, time: Time) -> OrbitalPosition:
+    def _propagate(self, sat: Satellite, time: ACCEPTABLE_TIME_TYPES) -> OrbitalPosition:
+        time = accept_any_datetime(time)
         t_unix = time.utc_datetime().timestamp()  # type:ignore
 
         # Calculate cubic splines if they don't exist

@@ -545,6 +545,14 @@ class SatelliteSet:
         from pprint import pprint
         pprint(self.all_tags_dict())
 
+    def print_all_categories(self) -> None:
+        """print all satellite categories with count"""
+        from pprint import pprint
+        categories = {}
+        for sat in self.sats:
+            categories[sat.category] = categories.get(sat.category, 0) + 1
+        pprint(categories)
+
 
 class Orbit:
     def __init__(self, name: str, alt: float) -> None:

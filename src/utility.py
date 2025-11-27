@@ -2,13 +2,24 @@
 from typing import Literal
 
 from skyfield.toposlib import GeographicPosition
-from skyfield.api import utc, wgs84
+from skyfield.api import utc, wgs84, Time
 from src import *
 import datetime
 import time
 import traceback
 import sys
 from functools import lru_cache
+
+ACCEPTABLE_TIME_TYPES = Time | datetime.datetime
+
+
+def accept_any_datetime(t: Time | datetime.datetime) -> Time:
+    """utility function to convert datetime to `skyfield` time zone aware `Time` object"""
+    if isinstance(t, Time):
+        return t
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=utc)
+    return ts.from_datetime(t)
 
 
 class ProgressBar:
