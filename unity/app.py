@@ -411,9 +411,9 @@ def traffic():
     # storage usage
     total, used, free = shutil.disk_usage("/")
     storage_info = {
-        "total": total,
-        "used": used,
-        "available": free
+        "total [GB]": round(total / (1024 ** 3), 2),
+        "used [GB]": round(used / (1024 ** 3), 2),
+        "available [GB]": round(free / (1024 ** 3), 2)
     }
 
     result = {
