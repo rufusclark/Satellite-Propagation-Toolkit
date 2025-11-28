@@ -42,7 +42,7 @@ class OrbitalCapacity:
         plt.grid(True)
         plt.show()
 
-    def to_SatelliteSet(self, training_set: Optional[SatelliteSet] = None) -> SatelliteSet:
+    def to_SatelliteSet(self, training_set: Optional[SatelliteSet] = None, *, training_set_bias: float = 0.5) -> SatelliteSet:
         """generate a new set of Satellites (`SatelliteSet`) based upon the provided training set or all active satellites if not provided.
 
         this makes the following assumptions when generating the new `SatelliteSet`:
@@ -50,8 +50,20 @@ class OrbitalCapacity:
         (2) the altitude within each `AltitudeBand` is uniformly distributed
         (3) the semi-major axis is approximately equal to the altitude (this is true where the eccentricity is near zero)
         (4) the future inclination, eccentricity and argument of perigee are representative of the training `SatelliteSet`
-        (5) the mean anomaly and RAAN are uniformly distributed
+        (5) the mean anomaly and RAAN are uniformly distributed or based on training `SatelliteSat` (this can be configured with `training_set_bias`)
+
+        Args:
+            training_set: `SatelliteSet` to use as a basis for distribution. Defaults to None.
+            training_set_bias: How much influence should the training set have on future sat RAAN and mean anomaly [0, 1]. Defaults to 0.5.
+
+        Returns:
+            new `SatelliteSet`
         """
+        # training set bias input validation
+        if training_set_bias < 0 or training_set_bias > 1:
+            raise ValueError(
+                f"invalid training_set_bias: training_set_bias must be between 0 and 1 inclusive")
+
         # get training set of satellites if it's not provided
         if not training_set:
             training_set = init_sats()
@@ -113,12 +125,28 @@ class OrbitalCapacity:
             ), 0, np.pi*2
         )
 
-        # (3) estimate mean anomaly and RAAN using a uniform distribution
-        mean_anomaly = np.random.uniform(
-            0, np.pi * 2, total_capacity)
+        # (3) estimate mean anomaly and RAAN using a uniform distribution or representative of the training set
+        rand = np.random.rand(total_capacity)
 
-        RAAN = np.random.uniform(
-            0, np.pi * 2, total_capacity)
+        mean_anomaly = np.where(
+            rand > training_set_bias,
+            np.random.uniform(0, np.pi * 2, total_capacity),
+            np.array([training_orbital_positions[i].mean_anomaly +
+                     np.random.uniform(-0.01, 0.01) for i in indices])
+        )
+
+        RAAN = np.where(
+            rand > training_set_bias,
+            np.random.uniform(0, np.pi * 2, total_capacity),
+            np.array([training_orbital_positions[i].RAAN +
+                     np.random.uniform(-0.01, 0.01) for i in indices])
+        )
+
+        # mean_anomaly = np.random.uniform(
+        #     0, np.pi * 2, total_capacity)
+
+        # RAAN = np.random.uniform(
+        #     0, np.pi * 2, total_capacity)
 
         # (4) estimate mean motion parametrically
         mean_motion = np.sqrt(MU / np.pow(semi_major_axes, 3)) * 60
