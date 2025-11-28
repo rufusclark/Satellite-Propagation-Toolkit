@@ -1,6 +1,8 @@
 # Satellite Propagation Toolkit
 
-The satellite propagation toolkit is designed to generate 2D projection images and data of trackable objects orbiting Earth using real satellite tracking data from CelesTrak and accurate propagation using the SGP4 model.
+> Please note this project is under active development and all API's are subject to change without notice. Please report bugs or feature requests via GitHub Issues.
+
+The satellite propagation toolkit is designed to make working with live and future satellite orbital easer by handling all the data management, processing and common functions for the user. This project is based upon CelesTrak TLE data using the SGP4 propagation model and MOCAT for future satellite sets. This project can be used for analysis with orbital data, generating output media and interfacing with external hardware devices.
 
 The project can generate images, videos, gifs and reports based on the tracking data of satellites and satellite tags from the NORAD and SATCAT CelesTrak datasets using either a Topocentric or Geocentric projection above a given location on the Earth's surface. This project also expense the underlying data along with a suite of tools to filter, analyse and display this data.
 
@@ -336,6 +338,13 @@ Using the buttons on your device you can switch between the different data views
 
 Some sample analysis has been included to highlight some key space trends and highlight some of the capabilities of this project.
 
+### Coverage of active weather & earth resource satellites
+
+This shows the boundary and density of the approximate coverage area of all active weather & earth resource satellites at a snapshot in time (2025-11-27 12:00). A off-nadir half angle of 15° has been used when the actual coverage angle of the constellation is not known.
+
+![Boundary of all active weather & earth resource satellites (506) coverage area with approximate off-nadir half angle (<15°) as of 2025-11-27 12:00:00](images/md/coverage_area.png)
+![Density of all active weather & earth resources satellites (506) coverage area with approximate off-nadir half angle (<15°) as of 2025-11-27 12:00:00](images/md/coverage_area_density.png)
+
 ### Topocentric projections
 
 The following topocentric projections have been generated with an effective FoV of 500 degrees (essentially showing everything in the sky) about 0N, 0E. This gives a really interesting perspective as if you were looking out into space from a point on the equator (except you can see through the Earth).
@@ -474,6 +483,5 @@ MicroPython stubs are available [here](https://github.com/pimoroni/pimoroni-pico
 
 This section briefly mentions some of the future improvements to this project that I was not possible to implement due to time contrainst around my internship. For most of the below the core code is in place to support there implementation without reformatting.
 
-* Support displaying potential future satellites (and/or mega-constellations) by importing own or generating your own tracking data
 * Further optimise code by supporting multiproccessing when sequencially generating images for devices or otherwise
 * Support reuse of generated images uploaded to Pico devices. Particularly useful for more quickly uploading custom data to a large number of devices
