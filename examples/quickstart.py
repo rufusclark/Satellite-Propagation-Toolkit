@@ -39,7 +39,7 @@ modifier = Modifiers(
 """
 define modifier to render image with.
 
-if the modifier is satisfied the pixel value of the corrosponding sat is added to the supplied RGB value.
+if the modifier is satisfied the pixel value of the corresponding sat is added to the supplied RGB value.
 
 this can be a list of any objects that inherit BasePixelModifier, see `analysis.py` for all available or define your own.
 """
@@ -73,17 +73,23 @@ greater control of data being imported is available, see `datasources.py` and `i
 """
 
 # years = 50
-# MOCAT_data = MOCATReader("./data/MOCAT/initial orbital capacity.csv")
+# MOCAT_data = MOCATReader(
+#     "./data/MOCAT/results_Su_predict_launch_mega_2025.csv")
 # sats = MOCAT_data.read_yrs(years).to_SatelliteSet(sats)
 """
-uncomment this section to use create a new selection of satellites based on the current distribution of satellites and MOCAT (https://github.com/ARCLab-MIT/MOCAT-SSEM) future capacity data
+uncomment this section to use create a new selection of satellites based on the current distribution of satellites and MOCAT (https://github.com/ARCLab-MIT/MOCAT-SSEM) future capacity data.
+
+this future satellite model assumes all planned mega constellations (Starlink, Leo, etc) are launched inline with public plans.
+
+please note that MOCAT only predicts the number of satellites below 2000km.
 
 values in years between 0 and 100 are allowed
 """
 
+sats.print_all_categories()
 # sats.print_all_tags()
 """
-print a list of all tags in the satellite dataset with the number of occurances
+print a list of all tags in the satellite dataset with the number of occurrences
 """
 
 matrix = Matrix(800, 800)
@@ -101,7 +107,7 @@ this is the method used to calculate where the satellites are"""
 
 orbital_positions = propagation_model.propagate(sats, t)
 """
-calculate the satellite positions using the defined satellite model, provived `SatelliteSet` and `Time`
+calculate the satellite positions using the defined satellite model, provided `SatelliteSet` and `Time`
 """
 
 model = TopocentricProjection.from_FoV(matrix, observer, FoV)
