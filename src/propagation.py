@@ -313,22 +313,28 @@ class OrbitalPosition:
             Returns:
                 ground radius [km]
             """
-            theta_rad = math.radians(off_nadir_half_angle)
-            altitude = self.alt
+            import numpy as np
 
-            # ground distance half-angle (with out of domain asin handling)
-            try:
-                central_angle = math.asin(
-                    ((EARTH_RADIUS + altitude) / (EARTH_RADIUS)) * math.sin(theta_rad))
-                half_angle_ground_distance = EARTH_RADIUS * central_angle
-            except ValueError:
-                half_angle_ground_distance = 1e100
+            theta_rad = np.radians(off_nadir_half_angle)
+            R_E = EARTH_RADIUS
+            h = self.alt
 
-            # ground distance to horizon
-            horizon_ground_distance = math.sqrt(
-                math.pow(EARTH_RADIUS + altitude, 2) - math.pow(EARTH_RADIUS, 2))
+            # calculate angle and radius of horizon
+            theta_horizon = np.asin(R_E / (R_E + h))
+            r_horizon = R_E * np.acos(R_E / (R_E + h))
 
-            return min(half_angle_ground_distance, horizon_ground_distance)
+            arg = (R_E + h)/R_E * np.sin(theta_rad)
+            arg_clipped = np.clip(arg, -1, 1)
+
+            # temporary non-vectorised approach
+            return R_E * (np.asin(arg_clipped) - theta_rad) if theta_rad <= theta_horizon else r_horizon
+
+            # vectorised approach for future use
+            # return np.where(
+            #     theta_rad <= theta_horizon,
+            #     R_E * (np.asin(arg_clipped) - theta_rad),
+            #     r_horizon
+            # )
 
         def to_dict(self) -> dict:
             return {

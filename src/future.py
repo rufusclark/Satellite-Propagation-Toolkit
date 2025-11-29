@@ -9,14 +9,12 @@ from .datasources import init_sats
 from .models import SatelliteSet, Satellite, ts
 from .propagation import OrbitalPosition, SGP4Propagation
 from .projection import EARTH_RADIUS
+from .const import MU
 
 import csv
 from math import isnan
 
 import numpy as np
-
-
-MU = 398600  # km^3/s^2, Earth Gravitational Parameter
 
 
 class OrbitalCapacity:
