@@ -93,6 +93,37 @@ def plot_interpolation_analysis(*datasets: tuple[Sequence[Time], list[float], li
     plt.show()
 
 
+def _center_grid_labels(fig, axes, xlabel, ylabel):
+    if xlabel:
+        fig.supxlabel(" ")
+    if ylabel:
+        fig.supylabel(" ")
+
+    # Draw the figure once so layout managers compute positions
+    fig.canvas.draw()
+
+    # flatten list of lists
+    axes_flat = [item for sublist in axes for item in sublist]
+
+    # Get the bounding box of the entire grid of axes
+    bboxes = [ax.get_position() for ax in axes_flat]
+    left = min([b.x0 for b in bboxes])
+    right = max([b.x1 for b in bboxes])
+    bottom = min([b.y0 for b in bboxes])
+    top = max([b.y1 for b in bboxes])
+
+    # Compute the center positions
+    xcenter = (left + right) / 2
+    ycenter = (bottom + top) / 2
+
+    # Add grid-level labels
+    if xlabel:
+        fig.text(xcenter, 0.01, xlabel, ha='center', va='bottom')
+    if ylabel:
+        fig.text(0.01, ycenter, ylabel, ha='left',
+                 va='center', rotation='vertical')
+
+
 def plot_orbital_overview(
         orbital_positions: list[OrbitalPosition],
         *,
@@ -107,227 +138,132 @@ def plot_orbital_overview(
     """
     import matplotlib.pyplot as plt
     import matplotlib.gridspec as gridspec
+    from matplotlib.ticker import MaxNLocator
+    import textwrap
 
-    # setup plot
-    fig = plt.figure(figsize=(10, 8))  # type: ignore
-    fig.canvas.manager.set_window_title(  # type: ignore
-        'Orbital Overview')
+    fig = plt.figure(figsize=(10, 8), constrained_layout=True)
+    fig.canvas.manager.set_window_title('Orbital Overview')  # type: ignore
     fig.suptitle(
-        f"Orbital Overview ({len(orbital_positions)} Satellites)", fontweight='bold')
-    gs = gridspec.GridSpec(3, 3, width_ratios=[1, 1, 1])
-    axs: list["Axes"] = []
-
-    axs.append(altitude_histogram(
-        fig.add_subplot(gs[0, 0]), orbital_positions)
+        f"Orbital Overview ({len(orbital_positions)} Satellites)", fontweight='bold'
     )
 
-    axs.append(eccentricity_histogram(
-        fig.add_subplot(gs[1, 0]), orbital_positions)
-    )
+    outer = gridspec.GridSpec(2, 1, height_ratios=[2, 1], figure=fig)
 
-    axs.append(inclination_histogram(
-        fig.add_subplot(gs[2, 0]), orbital_positions)
-    )
+    # top: 3x2 grid of histograms
+    top = gridspec.GridSpecFromSubplotSpec(2, 3, subplot_spec=outer[0])
+    top_axes: list[list["Axes"]] = [[None]*3 for _ in range(2)]  # type: ignore
+    def idx(i): return i//3, i % 3  # returns the grid position # type: ignore
+    def sub_cap(i): return chr(i + ord('a'))  # type: ignore
+    for i, data, label, limit in zip(
+        [0, 1, 2, 3, 4, 5],
+        [[pos.geo.alt for pos in orbital_positions],
+         [pos.sat.eccentricity for pos in orbital_positions],
+         [np.rad2deg(pos.sat.inclination)
+          for pos in orbital_positions],
+         [np.rad2deg(pos.sat.right_ascension_of_ascending_node)
+          for pos in orbital_positions],
+         [np.rad2deg(pos.sat.argument_of_perigee)
+          for pos in orbital_positions],
+         [pos.sat.launch_age.days / 365.25 for pos in orbital_positions]],
+        ["altitude [km]", "eccentricity", "inclination [°]",
+            "RAAN [°]", "argument of perigee [°]", "age [years]"],
+        [(0, 42000), (0, 1), (0, 180), (0, 360), (0, 360), (0, None)]
+    ):
+        row, col = idx(i)
+        if row == 0:
+            axis = fig.add_subplot(top[row, col])
+        else:
+            axis = fig.add_subplot(
+                top[row, col], sharey=top_axes[0][col])
 
-    axs.append(right_ascension_of_ascending_node_histogram(
-        fig.add_subplot(gs[0, 1]), orbital_positions)
-    )
+        axis.hist(data, bins=200, log=True)
+        axis.set_xlabel(f"({sub_cap(i)}) {label}")
+        axis.grid(which="both", linestyle="-", linewidth=0.3, alpha=0.7)
+        axis.set_xlim(*limit)
+        axis.xaxis.set_major_locator(MaxNLocator(nbins=6, prune=None))
 
-    axs.append(argument_of_perigee_histogram(
-        fig.add_subplot(gs[1, 1]), orbital_positions)
-    )
+        if col > 0:
+            plt.setp(axis.get_yticklabels(), visible=False)
+        top_axes[row][col] = axis
 
-    axs.append(launch_age_histogram(
-        fig.add_subplot(gs[2, 1]), orbital_positions)
-    )
+    # make all y-axis the same
+    axes_list = [ax for row in top_axes for ax in row if ax is not None]
+    max_height = max(max(patch.get_height()  # type: ignore
+                     for patch in ax.patches) for ax in axes_list)
+    for ax in axes_list:
+        ax.set_ylim(1, max_height*1.2)  # 1 instead of 0 because log scale
 
-    axs.append(category_piechart(
-        fig.add_subplot(gs[0, 2]), orbital_positions)
-    )
+    _center_grid_labels(fig, top_axes, "", "frequency")
 
-    axs.append(owner_piechart(
-        fig.add_subplot(gs[1, 2]), orbital_positions)
-    )
+    # bottom: 3x1 grid of pie charts
+    bottom = gridspec.GridSpecFromSubplotSpec(1, 3, subplot_spec=outer[1])
+    bottom_axes: list[list["Axes"]] = [[None]*3]  # type: ignore
+    def idx(i): return i//3, i & 3
+    def sub_cap(i): return chr(i + ord('g'))
+    for i, data, label in zip(
+        [0, 1, 2],
+        [
+            [pos.sat.category for pos in orbital_positions],
+            [pos.sat.owner for pos in orbital_positions],
+            [pos.sat.launch_country for pos in orbital_positions]
+        ],
+        ["category", "owner", "launch location"]
+    ):
+        row, col = idx(i)
+        axis = fig.add_subplot(bottom[row, col])
 
-    axs.append(launch_country_piechart(
-        fig.add_subplot(gs[2, 2]), orbital_positions)
-    )
+        # data processing
+        processed_data: dict[str, int] = {}
+        for data_point in data:
+            if not data_point:
+                data_point = "Unknown"
+            processed_data[data_point] = processed_data.get(data_point, 0) + 1
 
-    plt.tight_layout()
+        total = sum(processed_data.values())
+        threshold_deg = 8
+        threshold_fraction = threshold_deg / 360
+        threshold_number = threshold_fraction * total
+
+        for key, val in list(processed_data.items()):
+            if val < threshold_number:
+                processed_data["Other"] = processed_data.get("Other", 0) + val
+                del processed_data[key]
+
+        # sort
+        processed_data = dict(
+            sorted(processed_data.items(), key=lambda item: item[1], reverse=True))
+
+        # move "Other" to the end
+        if "Other" in processed_data:
+            processed_data["Other"] = processed_data.pop("Other")
+
+        values = list(processed_data.values())
+        labels = list(processed_data.keys())
+
+        # wrap long labels
+        labels = ["\n".join(textwrap.wrap(
+            label.strip(), width=18, break_long_words=False, replace_whitespace=False)) for label in labels]
+
+        # end of data processing
+
+        # plot
+        axis.set_xlabel(f"({sub_cap(i)}) {label}")
+        axis.pie(
+            values,
+            labels=labels,
+            textprops={'fontsize': 6},
+            autopct=lambda pct: str(int(round(pct*sum(values)/100))),
+            pctdistance=0.85,
+        )
+
+        # _piechart_2(axis, f"({sub_cap(i)}) {label}", counts)
+
+        bottom_axes[row][col] = axis
+
     if _filename:
         plt.savefig(_filename)
     if _plot:
         plt.show()
-
-
-def altitude_histogram(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
-    return _histogram(
-        axes=axes,
-        label="altitude [km]",
-        data=[position.geo.alt for position in orbital_positions]
-    )
-
-
-def eccentricity_histogram(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
-    return _histogram(
-        axes=axes,
-        label="eccentricity",
-        data=[position.sat.eccentricity for position in orbital_positions]
-    )
-
-
-def inclination_histogram(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
-    return _histogram(
-        axes=axes,
-        label="inclination [deg]",
-        data=[np.rad2deg(position.sat.inclination)
-              for position in orbital_positions]
-    )
-
-
-def right_ascension_of_ascending_node_histogram(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
-    return _histogram(
-        axes=axes,
-        label="right ascension of ascending node [deg]",
-        data=[np.rad2deg(position.sat.right_ascension_of_ascending_node)
-              for position in orbital_positions]
-    )
-
-
-def argument_of_perigee_histogram(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
-    return _histogram(
-        axes=axes,
-        label="argument of perigee [deg]",
-        data=[np.rad2deg(position.sat.argument_of_perigee)
-              for position in orbital_positions]
-    )
-
-
-def launch_age_histogram(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
-    return _histogram(
-        axes=axes,
-        label="launch age [years]",
-        data=[position.sat.launch_age.days / 365.25
-              for position in orbital_positions]
-    )
-
-
-def category_piechart(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
-    # compute the number of each category
-    counts: dict[str, int] = {}
-    for position in orbital_positions:
-        cat = position.sat.category
-        if cat in counts:
-            counts[cat] += 1
-        else:
-            counts[cat] = 1
-
-    # remove the word satellites from data labels
-    for key in list(counts.keys()):
-        counts[key.split(" satellites")[0]] = counts.pop(key)
-
-    return _piechart(
-        axes=axes,
-        label="categories",
-        data=counts
-    )
-
-
-def owner_piechart(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
-    # compute the number of each category
-    counts: dict[str, int] = {}
-    for position in orbital_positions:
-        if position.sat.owner:
-            owner = position.sat.owner
-        else:
-            continue
-        if owner in counts:
-            counts[owner] += 1
-        else:
-            counts[owner] = 1
-
-    return _piechart(
-        axes=axes,
-        label="owner",
-        data=counts
-    )
-
-
-def launch_site_piechart(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
-    # compute the number of each category
-    counts: dict[str, int] = {}
-    for position in orbital_positions:
-        if position.sat.launch_site:
-            launch_site = position.sat.launch_site
-        else:
-            continue
-        if launch_site in counts:
-            counts[launch_site] += 1
-        else:
-            counts[launch_site] = 1
-
-    return _piechart(
-        axes=axes,
-        label="launch site",
-        data=counts
-    )
-
-
-def launch_country_piechart(axes: "Axes", orbital_positions: list[OrbitalPosition]) -> "Axes":
-    # compute the number of each category
-    counts: dict[str, int] = {}
-    for position in orbital_positions:
-        if position.sat.launch_country:
-            launch_country = position.sat.launch_country
-        else:
-            continue
-        if launch_country in counts:
-            counts[launch_country] += 1
-        else:
-            counts[launch_country] = 1
-
-    return _piechart(
-        axes=axes,
-        label="launch country",
-        data=counts
-    )
-
-
-def _histogram(axes: "Axes", label: str, data: list[float]) -> "Axes":
-    axes.hist(data, bins=100, log=True)
-    axes.set_xlabel(label)
-    axes.set_ylabel("frequency")
-    axes.set_title(f"{label.split(' [')[0]}")
-    axes.grid(True)
-    return axes
-
-
-def _piechart(axes: "Axes", label: str, data: dict[str, int]) -> "Axes":
-    # sort dicts and combine smaller terms
-    n = 9
-    sorted_items = sorted(
-        data.items(), key=lambda item: item[1], reverse=True)
-    if len(sorted_items) > n:
-        sorted_items[n] = ("Other", sum([item[1]
-                           for item in sorted_items[n:]]))
-        sorted_items = sorted_items[:n+1]
-        data = dict(sorted_items)
-
-    # wrap long labels
-    for key in list(data.keys()):
-        data['\n('.join(',\n'.join(key.split(',', maxsplit=1)).split('(')) if len(
-            key) > 20 else key] = data.pop(key)
-
-    # add count to the end of the label
-    for key, value in list(data.items()):
-        data[f"{key} ({value})"] = data.pop(key)
-
-    # plot
-    axes.set_title(f"{label} pie chart")
-    wedges, _ = axes.pie(list(data.values()))  # type: ignore
-    axes.legend(wedges, list(data.keys()), loc="center left",
-                bbox_to_anchor=(1, 0, 0.5, 1), fontsize="small")
-    return axes
 
 
 def plot_on_Earth(orbital_positions: list[OrbitalPosition]) -> None:

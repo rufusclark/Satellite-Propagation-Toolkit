@@ -501,27 +501,30 @@ class SATCAT:
 
 
 @functools.lru_cache(1)
-def init_sats() -> SatelliteSet:
+def init_sats(*, update_sources: bool = True) -> SatelliteSet:
     """load and sats, update data from CelesTrak (NORAD) and add metadata from SATCAT
 
-    Note this function also removes all sats with data older than 14 days as they will give inaccurate propogation data.
+    greater control is available by calling the methods invidually. the results of this fucntion are cached. If this is expected to run continously, clear the cache every 24 hours to keep the data fresh.
 
-    Greater control is available my calling the methods individually
+    >>> init_sats.cache_clear()
 
-    The result of this function is cached. This shouldn't present an issue for scripting. If this is expected to run continously, please restart it every 24 hours to keep the data fresh
+    Args:
+        update_sources: whether to update NORAD and SATCAT sources if out of date. Defaults to True.
 
     Returns:
-        Sats object containing all objects
+        `SatelliteSet`: object containing all satellites from data sources
     """
     # load all sats and update if old
     norad = NORAD()
     norad.get_source_groups()
-    norad.update_sources()
+    if update_sources:
+        norad.update_sources()
     sats = norad.load_all_sats()
 
     # load all SATCAT data and update if old
     satcat = SATCAT()
-    satcat.update_sources()
+    if update_sources:
+        satcat.update_sources()
     satcat_data = satcat.load()
 
     # add tags to sats from SATCAT

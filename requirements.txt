@@ -16,3 +16,4 @@ numpy
 tabulate
 scipy
 flask-limiter
+textwrap3
