@@ -553,6 +553,23 @@ class SatelliteSet:
             categories[sat.category] = categories.get(sat.category, 0) + 1
         pprint(categories)
 
+    def print_all_constellations(self, min=2) -> None:
+        """print all satellite constellations with count with at least `min` satellites
+
+        Args:
+            min: minimum number in constellations to show. Defaults to 2.
+        """
+        from pprint import pprint
+        constellations = {}
+        for sat in self.sats:
+            constellations[sat.constellation] = constellations.get(
+                sat.constellation, 0) + 1
+        constellations = {k: v for k, v in constellations.items() if v >= min}
+        constellations = dict(sorted(constellations.items(),
+                                     key=lambda item: item[1], reverse=True))
+        del constellations[""]
+        pprint(constellations)
+
 
 class Orbit:
     def __init__(self, name: str, alt: float) -> None:
