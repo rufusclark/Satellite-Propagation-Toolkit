@@ -37,7 +37,7 @@ class OrbitalPosition:
     def __init__(self, sat: Satellite, position: ICRF | None, time: ACCEPTABLE_TIME_TYPES) -> None:
         self.sat = sat
         self.gcrs_position = position
-        self.time = accept_any_datetime(time)
+        self._time = accept_any_datetime(time)
 
         # Alternate reference frames
         self.geo = self._Geocentric(self)
@@ -51,6 +51,15 @@ class OrbitalPosition:
         self._omega = None
         self._M = None
         self._n = None
+
+    @property
+    def time(self) -> datetime.datetime:
+        return self._time.utc_datetime()  # type: ignore
+
+    @property
+    def timestamp(self) -> float:
+        """return POSIX timestamp"""
+        return self.time.timestamp()
 
     @property
     def a(self) -> float:
@@ -191,7 +200,7 @@ class OrbitalPosition:
     def to_dict(self) -> dict:
         out = self.sat.to_dict()
         out["orbital position"] = {
-            "time": self.time.utc_iso(),
+            "time": self._time.utc_iso(),
             "oscillating elements": self.oscillating_elements_to_dict(),
             "geo": self.geo.to_dict()
         }
@@ -480,7 +489,7 @@ class KeplerianPropagation(BasePropagation):
             argp=p0.argument_of_periapsis,
             M0=p0.mean_anomaly,
             t=time.utc_datetime().timestamp(),  # type: ignore
-            t0=p0.time.utc_datetime().timestamp(),  # type: ignore
+            t0=p0._time.utc_datetime().timestamp(),  # type: ignore
             theta0=theta0
         )
 

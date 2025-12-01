@@ -231,7 +231,7 @@ def get_output(
                 "Omega": position.Omega,
                 "omega": position.omega,
                 "M_0": position.mean_anomaly,
-                "t_0": position.time.utc_iso(),
+                "t_0": position._time.utc_iso(),
                 "theta_g0": KeplerianPropagation._greenwich_sidereal_angle(position.sat.epoch)
             } if format == "keplerian" else {}
             ),
@@ -244,7 +244,7 @@ def get_output(
                 "z_v": position.geo.z_v,
                 "e": position.eccentricity,
                 "i": position.inclination,
-                "t_0": position.time.utc_iso()
+                "t_0": position._time.utc_iso()
             } if format == "cartesian" and not math.isnan(position.geo.x) else {}
             ),
             **({

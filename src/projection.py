@@ -36,7 +36,7 @@ class FramePosition:
     def to_dict(self) -> dict:
         out = self.orbital_position.to_dict()
         out["frame position"] = {
-            "time": self.orbital_position.time.utc_iso(),
+            "time": self.orbital_position._time.utc_iso(),
             "x": self.x,
             "y": self.y
         }
@@ -82,7 +82,7 @@ class SatFrame:
         if not self.frame_positions:
             raise Warning(
                 "No satellites within the SatFrame so no times is returned")
-        return self._frame_positions[0].orbital_position.time
+        return self._frame_positions[0].orbital_position._time
 
     @property
     def unix_timestamp(self) -> float:
