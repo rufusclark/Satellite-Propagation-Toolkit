@@ -92,7 +92,7 @@ class OrbitalCapacity:
                     np.random.uniform(band.low, band.high, band.capacity)
                     for band in self.altitude_bands
                 ]
-            ), 0, 2000
+            ), 200, 2000
         ) + EARTH_RADIUS
 
         # (2) resample inclination, eccentricity and argument of perigee (and vary values)
@@ -140,12 +140,6 @@ class OrbitalCapacity:
                      np.random.uniform(-0.01, 0.01) for i in indices])
         )
 
-        # mean_anomaly = np.random.uniform(
-        #     0, np.pi * 2, total_capacity)
-
-        # RAAN = np.random.uniform(
-        #     0, np.pi * 2, total_capacity)
-
         # (4) estimate mean motion parametrically
         mean_motion = np.sqrt(MU / np.pow(semi_major_axes, 3)) * 60
 
@@ -154,7 +148,7 @@ class OrbitalCapacity:
 
         # create new satellite objects
         sats = [
-            Satellite.from_orbital_elements(
+            Satellite.from_tle_orbital_elements(
                 name=f"{self.years:.0f}SAT-{i:06}",
                 eccentricity=eccentricities[i],
                 argument_of_perigee=argument_of_perigee[i],

@@ -29,10 +29,11 @@ The core features of the project are:
 * Propagating tracked objects using the industry standard SPG4 model
 * Generating images, video and gifs from a user's perspective
 * Analyse objects based on metadata and properties
-* Creat custom outputs showcasing your data
-* Generate reports summerising an orbital projection
-* Estimate a realistic future space enviroment based on the [MOCAT tool](https://github.com/ARCLab-MIT/MOCAT-SSEM)
+* Create custom outputs showcasing your data
+* Generate reports summarising an orbital projection
+* Estimate a realistic future space environment based on the [MOCAT tool](https://github.com/ARCLab-MIT/MOCAT-SSEM)
 * Displaying generated images on [supported devices](#hardware-operations) whilst tethered to a PC or standalone
+* Support for spacecraft and constellation coverage and revisit modelling
 
 ![500deg Topocentric Projection about 0N, 0E](images/md/0,0%20TOPO%20500deg%20400x400.png)
 <!-- Include images of hardware - massive panel -->

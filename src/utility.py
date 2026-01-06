@@ -10,16 +10,31 @@ import traceback
 import sys
 from functools import lru_cache
 
-ACCEPTABLE_TIME_TYPES = Time | datetime.datetime
+ACCEPTABLE_TIME_TYPES = Time | datetime.datetime | list[datetime.datetime]
 
 
-def accept_any_datetime(t: Time | datetime.datetime) -> Time:
+def accept_any_datetime(t: ACCEPTABLE_TIME_TYPES) -> Time:
     """utility function to convert datetime to `skyfield` time zone aware `Time` object"""
-    if isinstance(t, Time):
-        return t
-    if t.tzinfo is None:
-        t = t.replace(tzinfo=utc)
-    return ts.from_datetime(t)
+    match t:
+        case Time():
+            return t
+        case datetime.datetime():
+            if t.tzinfo is None:
+                t = t.replace(tzinfo=utc)
+            return ts.from_datetime(t)
+        case [datetime.datetime() as first, *rest]:
+            new_t = [None for _ in range(len(t))]  # type: ignore
+            for i, item in enumerate(t):
+                new_t[i] = item.replace(  # type: ignore
+                    tzinfo=utc) if item.tzinfo is None else item
+            return ts.from_datetimes(new_t)
+        case _:
+            raise TypeError(
+                f"t is not a valid type. provided: {type(t)}, valid types: {ACCEPTABLE_TIME_TYPES}")
+
+    # if t.tzinfo is None:
+    #     t = t.replace(tzinfo=utc)
+    # return ts.from_datetime(t)
 
 
 class ProgressBar:
@@ -36,11 +51,11 @@ class ProgressBar:
         filled = int(bar_width * percent)
         bar = "#" * filled + " " * (bar_width - filled)
 
-        eta = (elapsed / tasks_completed) * (self.tasks -
-                                             tasks_completed) if tasks_completed else 0
+        remaining = (elapsed / tasks_completed) * (
+            self.tasks - tasks_completed) if tasks_completed else 0
 
         sys.stdout.write(
-            f"\r[{bar}] {percent:.2%} (eta: {datetime.timedelta(seconds=int(eta))})")
+            f"\r[{bar}] {percent:.2%} (eta: {datetime.timedelta(seconds=int(remaining))})")
         sys.stdout.flush()
 
         if self.tasks == tasks_completed:

@@ -33,6 +33,12 @@ class Manager:
     generate_XXXXX_core methods provide direct access to all variables
     """
 
+    def _handle_observer_input(self, observer: Optional[GeographicPosition]) -> GeographicPosition:
+        if observer is None:
+            return get_estimated_latlon()
+        else:
+            return observer
+
     def __init__(
         self,
         sats: Optional[SatelliteSet] = None
@@ -51,7 +57,7 @@ class Manager:
 
     def generate_image(
         self,
-        observer: GeographicPosition = get_estimated_latlon(),
+        observer: Optional[GeographicPosition] = None,
         FoV: float = 120,
         time: Time = ts.now(),
         propagation_model: BasePropagation = SGP4Propagation(),
@@ -83,7 +89,7 @@ class Manager:
             propagation_model=propagation_model,
             projection_model=projection_model_class.from_FoV(
                 matrix=matrix,
-                observer=observer,
+                observer=self._handle_observer_input(observer),
                 FoV=FoV
             ),
             modifiers=modifiers,
@@ -200,7 +206,7 @@ class Manager:
         temp_dir = f"./images/temp/{''.join(choices(ascii_letters + digits, k=10))}"
 
         # generate images
-        image_paths, image_frames = self.generate_images_core(
+        image_paths, _ = self.generate_images_core(
             propagation_model=propagation_model,
             projection_model=projection_model,
             modifiers=modifiers,
@@ -224,7 +230,7 @@ class Manager:
 
     def generate_video(
         self,
-        observer: GeographicPosition = get_estimated_latlon(),
+        observer: Optional[GeographicPosition] = None,
         FoV: float = 120,
         propagation_start_time: Time = ts.now(),
         propagation_time_interval: timedelta = timedelta(milliseconds=100),
@@ -244,7 +250,7 @@ class Manager:
             propagation_model=propagation_model,
             projection_model=projection_model_class.from_FoV(
                 matrix=matrix,
-                observer=observer,
+                observer=self._handle_observer_input(observer),
                 FoV=FoV
             ),
             modifiers=modifiers,
@@ -274,7 +280,7 @@ class Manager:
 
     def generate_report(
         self,
-        observer: GeographicPosition = get_estimated_latlon(),
+        observer: Optional[GeographicPosition] = None,
         FoV: float = 120,
         time: Time = ts.now(),
         propagation_model: BasePropagation = SGP4Propagation(),
@@ -303,7 +309,7 @@ class Manager:
             propagation_model=propagation_model,
             projection_model=projection_model_class.from_FoV(
                 matrix,
-                observer,
+                self._handle_observer_input(observer),
                 FoV
             ),
             modifiers=modifiers,
@@ -353,7 +359,7 @@ class Manager:
 
     def generate_gif(
         self,
-        observer: GeographicPosition = get_estimated_latlon(),
+        observer: Optional[GeographicPosition] = None,
         FoV: float = 120,
         propagation_start_time: Time = ts.now(),
         propagation_time_interval: timedelta = timedelta(milliseconds=500),
@@ -373,7 +379,7 @@ class Manager:
             propagation_model=propagation_model,
             projection_model=projection_model_class.from_FoV(
                 matrix=matrix,
-                observer=observer,
+                observer=self._handle_observer_input(observer),
                 FoV=FoV
             ),
             modifiers=modifiers,

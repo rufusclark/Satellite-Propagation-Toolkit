@@ -11,7 +11,9 @@ from skyfield.framelib import itrs
 
 from sgp4.api import Satrec, WGS84
 
-from numpy import rad2deg, pi
+from .orbital_utilities import true_to_mean_anomaly
+from .const import *
+import numpy as np
 
 # Time scale for Earth Orbiting Satellites
 ts = load.timescale()
@@ -57,6 +59,48 @@ class Satellite:
         eccentricity: float,
         argument_of_perigee: float,
         inclination: float,
+        true_anomaly: float,
+        semi_major_axis: float,
+        RAAN: float,
+        name: str = ""
+    ) -> Self:
+        """create a new `Satellite` object from Keplerian orbital elements
+
+        Args:
+            eccentricity: eccentricity
+            argument_of_perigee: argument of perigee [deg]
+            inclination: inclination [deg]
+            true_anomaly: true anomaly [deg]
+            semi_major_axis: semi major axis [km]
+            RAAN: right ascension of ascending node [deg]
+            name: `Satellite` name
+
+        Returns:
+            new `Satellite` object
+        """
+        argument_of_perigee = np.radians(argument_of_perigee)
+        inclination = np.radians(inclination)
+        true_anomaly = np.radians(true_anomaly)
+        RAAN = np.radians(RAAN)
+
+        mean_motion = np.sqrt(MU / np.pow(semi_major_axis, 3)) * 60
+        mean_anomaly = true_to_mean_anomaly(true_anomaly, eccentricity)
+        return cls.from_tle_orbital_elements(
+            eccentricity=eccentricity,
+            argument_of_perigee=argument_of_perigee,
+            inclination=inclination,
+            mean_anomaly=mean_anomaly,
+            mean_motion=mean_motion,
+            RAAN=RAAN,
+            name=name
+        )
+
+    @classmethod
+    def from_tle_orbital_elements(
+        cls,
+        eccentricity: float,
+        argument_of_perigee: float,
+        inclination: float,
         mean_anomaly: float,
         mean_motion: float,
         RAAN: float,
@@ -71,8 +115,8 @@ class Satellite:
         """generate a new `Satellite` object from orbital parameters
 
         Args:
-            eccentricity: eccentricty]
-            argument_of_perigee: arguemtn of perigee [rad]
+            eccentricity: eccentricity
+            argument_of_perigee: argument of perigee [rad]
             inclination: inclination [rad]
             mean_anomaly: mean anomaly [rad]
             mean_motion: mean motion [rad/min]
@@ -313,7 +357,7 @@ class Satellite:
             str information output
         """
         from pprint import pformat
-        return pformat(self.to_dict)
+        return pformat(self.to_dict())
 
     def add_tag(self, tag: str) -> None:
         """add an additional tag to the sat if it doesn't already exist
@@ -487,7 +531,7 @@ class SatelliteSet:
     def sats(self) -> List[Satellite]:
         return self._sats
 
-    def limit(self, n: int) -> Self:
+    def limit(self, n: int, random_order=True) -> Self:
         """returns a new Sats object containing the first n sats
 
         Args:
@@ -496,7 +540,19 @@ class SatelliteSet:
         Returns:
             new Sats object
         """
-        return self.__class__(self.sats[:n])
+        if random_order:
+            return self.__class__(self.randomise_order().sats[:n])
+        else:
+            return self.__class__(self.sats[:n])
+
+    def randomise_order(self) -> Self:
+        """returns a new `SatelliteSet` object with the same sats in a different order.
+
+        Returns:
+            new `SatelliteSat` object
+        """
+        from random import sample
+        return self.__class__(sample(self.sats, len(self.sats)))
 
     def filter(self, fn: Callable[[Satellite], bool]) -> Self:
         """returns a new Sats object containing all sats for which fn(sat) is true

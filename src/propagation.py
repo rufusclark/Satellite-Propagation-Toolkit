@@ -301,6 +301,17 @@ class OrbitalPosition:
             self._x_v, self._y_v, self._z_v = v.km_per_s
             return self._x, self._y, self._z, self._x_v, self._y_v, self._z_v
 
+        def latitude_longitude(self) -> tuple[float, float]:
+            """returns latitude [degrees] and longitude [degrees]"""
+            if not self.parent.gcrs_position:
+                return math.nan, math.nan
+
+            geo_pos = wgs84.latlon_of(self.parent.gcrs_position)
+            self._lat = geo_pos[0].degrees
+            self._lon = geo_pos[1].degrees
+
+            return self._lat, self._lon  # type: ignore
+
         def latitude_longitude_and_altitude(self) -> tuple[float, float, float]:
             """returns latitude [degrees], longitude [degrees] and altitude [km]"""
             if not self.parent.gcrs_position:
@@ -313,6 +324,14 @@ class OrbitalPosition:
 
             return self._lat, self._lon, self._alt  # type: ignore
 
+        def total_velocity(self) -> float:
+            """returns the total velocity [km/s] of the spacecraft
+
+            Returns:
+                total velocity [km/s]
+            """
+            return np.sqrt(self.x_v**2 + self.y_v**2 + self.z_v**2)
+
         def swath_ground_radius(self, off_nadir_half_angle: float) -> float:
             """return the ground radius (assuming a spherical Earth) of the satellite with a given off nadir half angle at it's current altitude. If the half angle points beyond the horizon this will return the ground radius to the horizon instead.
 
@@ -322,7 +341,6 @@ class OrbitalPosition:
             Returns:
                 ground radius [km]
             """
-            import numpy as np
 
             theta_rad = np.radians(off_nadir_half_angle)
             R_E = EARTH_RADIUS
@@ -447,9 +465,24 @@ class SGP4Propagation(BasePropagation):
 
     This is the most accurate propagation model for this dataset and is accurate for 2 weeks +/- epoch"""
 
-    def _propagate(self, sat: Satellite, time: ACCEPTABLE_TIME_TYPES) -> OrbitalPosition:
-        time = accept_any_datetime(time)
-        return OrbitalPosition(sat, sat._sat.at(time), time)
+    def _propagate(self, sat: Satellite, times: ACCEPTABLE_TIME_TYPES) -> OrbitalPosition | list[OrbitalPosition]:
+        times = accept_any_datetime(times)
+
+        # check if times is a single time
+        if times.shape == ():
+            return OrbitalPosition(sat, sat._sat.at(times), times)
+
+        n = len(times)
+        if n > 0:
+            pos: list[OrbitalPosition] = [
+                None for _ in range(n)]  # type:ignore
+            skyfield_poses = sat._sat.at(times)
+            # mypy:
+            for i, (skyfield_pos, t) in enumerate(zip(skyfield_poses, times)):  # type: ignore
+                pos[i] = OrbitalPosition(sat, skyfield_pos, t)
+            return pos
+        else:
+            return OrbitalPosition(sat, sat._sat.at(times), times)
 
 
 class KeplerianPropagation(BasePropagation):
@@ -469,8 +502,8 @@ class KeplerianPropagation(BasePropagation):
         # get keplerian/oscilating elements using SGP4 propagation if they haven't been calculated
         time = accept_any_datetime(time)
         if not (sat.id in self._cached_orbital_positions):
-            p0 = SGP4Propagation()._propagate(
-                sat, time=time)
+            p0: OrbitalPosition = SGP4Propagation()._propagate(
+                sat, time)  # type: ignore
             p0._calculate_osculating_elements()
             self._cached_orbital_positions[sat.id] = p0
 

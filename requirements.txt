@@ -17,3 +17,5 @@ tabulate
 scipy
 flask-limiter
 textwrap3
+numba
+cartopy
