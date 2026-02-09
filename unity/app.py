@@ -222,6 +222,8 @@ def get_output(
             "owner": position.sat.owner,
             "owner country": position.sat.owner_country,
             "constellation": position.sat.constellation,
+            "max flux debris density": position.max_flux_debris_density,
+            "avg flux debris density": position.avg_flux_debris_density,
             "orbit type": position.is_leo() and "LEO" or position.is_meo() and "MEO" or position.is_geo() and "GEO" or position.is_heo() and "HEO" or "",
             "tags": [tag for tag in position.sat.tags if tag.lower() not in [position.sat.category.lower(), (position.sat.operational_status or "").lower(), (position.sat.launch_site or "").lower(), (position.sat.launch_country or "").lower(), (position.sat.object_type or "").lower(), (position.sat.owner or "").lower(), ""]],
             **({

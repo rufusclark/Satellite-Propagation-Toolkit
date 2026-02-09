@@ -69,56 +69,74 @@ class _DebrisFluxDataset:
         self._interpolator = RegularGridInterpolator(
             (inclination_axis, altitude_axis),
             flux_data,
-            method="linear"
+            method="linear",
+            bounds_error=False,
+            fill_value=np.nan
         )
 
-    def interpolator(self, points):
+    def interpolator(self, points, bounds_error=False):
         """get the internal interpolator object"""
         # TODO: Estimate debris flux outside of upper bound - potentially add a final altitude at 1Mkm to the end of the dataset to allow effective interpolation out to a crazy high altitude?
 
-        if (alt := np.max(points[:, 1])) > self._altitude_max or np.min(points[:, 1]) < self._altitude_min:
-            raise OutOfBoundError(
-                f"altitude ({alt:.2f}km) out of bounds, must be between {self._altitude_min:.1f}km and {self._altitude_max:.1f}m"
-            )
+        alts = points[:, 1]
+        alt_min = alts.min()
+        alt_max = alts.max()
+
+        if bounds_error:
+            # raise an error if altitudes out of bounds
+            if alt_max > self._altitude_max or alt_min < self._altitude_min:
+                raise OutOfBoundError(
+                    f"altitude range ({alt_min:.2f}–{alt_max:.2f} km) "
+                    f"out of bounds, must be between "
+                    f"{self._altitude_min:.1f} and {self._altitude_max:.1f}"
+                )
+
         return self._interpolator(points)
+
+    def get_orbit_altitudes(self, sat: Satellite | OrbitalPosition) -> np.ndarray:
+        if isinstance(sat, Satellite):
+            position = SGP4Propagation()._propagate(sat, ts.now())
+        else:
+            position = sat
+
+        if not isinstance(position, OrbitalPosition):
+            raise TypeError(f"Expected OrbitalPosition, got {type(position)}")
+
+        try:
+            n = min(int(5 * (20 ** position.eccentricity)) +
+                    10, 100)  # optimise for orbit eccentricity
+        except:
+            n = 100
+
+        points = np.array(
+            [
+                [sat.inclination, alt]  # type: ignore
+                for alt in np.linspace(position.perigee, position.apogee, num=n)
+            ]
+        )
+        return points
 
     def estimate_max_flux(self, sat: Satellite | OrbitalPosition) -> float:
         """estimate the maximum debris flux [#/m²/year] for a given satellite based on its orbital parameters estimated from TLE using the SPG4 model
-        """
-        if isinstance(sat, Satellite):
-            position = SGP4Propagation()._propagate(sat, ts.now())
-        else:
-            position = sat
 
-        n = min(int(5 * (20 ** position.eccentricity)) +
-                10, 100)  # optimise for orbit eccentricity
-        points = np.array(
-            [
-                [sat.inclination, alt]  # type: ignore
-                for alt in np.linspace(position.perigee, position.apogee, num=n)
-            ]
-        )
+        this function ignores altitudes outside of the dataset bounds and returns the flux with the bounds.
+        """
+        points = self.get_orbit_altitudes(sat)
+        if (points.size == 0) or np.isnan(points).all():
+            return 0.0
         flux_points = self.interpolator(points)
-        return np.max(flux_points)  # type: ignore
+        return np.nanmax(flux_points)  # type: ignore
 
     def estimate_average_flux(self, sat: Satellite | OrbitalPosition) -> float:
         """estimate the average debris flux [#/m²/year] for a given satellite based on its orbital parameters estimated from TLE using the SPG4 model
-        """
-        if isinstance(sat, Satellite):
-            position = SGP4Propagation()._propagate(sat, ts.now())
-        else:
-            position = sat
 
-        n = min(int(5 * (20 ** position.eccentricity)) +
-                10, 100)  # optimise for orbit eccentricity
-        points = np.array(
-            [
-                [sat.inclination, alt]  # type: ignore
-                for alt in np.linspace(position.perigee, position.apogee, num=n)
-            ]
-        )
+        this function ignores altitudes outside of the dataset bounds and returns the flux with the bounds.
+        """
+        points = self.get_orbit_altitudes(sat)
+        if (points.size == 0) or np.isnan(points).all():
+            return 0.0
         flux_points = self.interpolator(points)
-        return np.mean(flux_points)  # type: ignore
+        return np.nanmean(flux_points)  # type: ignore
 
     def _estimate_flux(self, altitude: float, inclination: float) -> float:
         return self.interpolator([inclination, altitude])[0]
