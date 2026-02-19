@@ -14,6 +14,8 @@ import datetime
 import numpy as np
 from numpy.typing import NDArray
 
+from typing import Self
+
 # TODO: Add methods for quickly and easily plotting ground tracks and other data
 # TODO: Implement SatellitePositions
 # TODO: Implement propagation techniques
@@ -146,6 +148,7 @@ class OrbitalPosition:
         return self.topo.alt > 0
 
     def is_geo(self) -> bool:
+        """is GEO (Geostationary Earth Orbit)"""
         GEO_ALT = 35786
         return (
             self.geo.alt < GEO_ALT + 500
@@ -155,12 +158,14 @@ class OrbitalPosition:
         )
 
     def is_leo(self) -> bool:
+        """is LEO (Low Earth Orbit)"""
         return (
             self.geo.alt < 2000
             and self.sat.eccentricity < 0.05
         )
 
     def is_meo(self) -> bool:
+        """is MEO (Medium Earth Orbit)"""
         GEO_ALT = 35786
         return (
             self.geo.alt >= 2000
@@ -169,9 +174,41 @@ class OrbitalPosition:
         )
 
     def is_heo(self) -> bool:
+        """is HEO (Highly Elliptical Orbit)"""
         return (
             self.sat.eccentricity >= 0.5
         )
+    
+    def altitude_tag(self) -> str:
+        """return the most appropriate altitude tag
+
+        The output will be one of,
+        - "Low Earth Orbit" (includes Sun-Synchronous Orbit and Very Low Earth Orbit)
+        - "Medium Earth Orbit"
+        - "Geosynchronous Orbit" (includes geostationary orbits)
+        - "Highly Elliptical Orbit"
+        - "High Earth Orbit" (includes escape orbits and acts as a catch all)
+        """
+        h_LEO = 2000
+        h_GEO = 35786
+        h_GEO_radius = 500
+
+        h = self.geo.alt
+        e = self.sat.eccentricity
+
+        if e > 0.25:
+            return "Highly Elliptical Orbit"
+        
+        if h < h_LEO:
+            return "Low Earth Orbit"
+        
+        if h < (h_GEO - h_GEO_radius):
+            return "Medium Earth Orbit"
+        
+        if h < (h_GEO + h_GEO_radius):
+            return "Geosynchronous Orbit"
+
+        return "High Earth Orbit"
 
     def _calculate_osculating_elements(self) -> None:
         """calculate osculating elements from existing GCRS position"""
@@ -248,6 +285,14 @@ class OrbitalPosition:
             if not self._z:
                 self.cartesian_position_and_velocity()
             return self._z  # type: ignore
+        
+        def distance(self, other: Self) -> float:
+            """return the distance in km between 2 points"""
+            return math.sqrt(
+                (self.x - other.x)**2 +
+                (self.y - other.y)**2 +
+                (self.z - other.z)**2
+            )
 
         @property
         def x_v(self) -> float:

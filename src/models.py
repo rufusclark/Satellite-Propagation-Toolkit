@@ -484,7 +484,8 @@ class SatelliteSet:
         self._sats = sats
 
         # filter and analyse data
-        self.remove_duplicates()
+        self.remove_duplicate_sats_by_NORAD()
+        self.remove_duplicate_tags()
         for sat in self.sats:
             sat.generate_debris_tag()
 
@@ -511,7 +512,15 @@ class SatelliteSet:
         for sat in self.sats:
             sat.add_tags_from_SATCAT(satcat)
 
-    def remove_duplicates(self):
+    def remove_duplicate_sats_by_NORAD(self) -> None:
+        """remove all duplicate satellites by NORAD CAT ID"""
+        out_sats: dict[int, Satellite] = {}
+        for sat in self.sats:
+            if sat.norad_cat_id not in out_sats:
+                out_sats[sat.norad_cat_id] = sat
+        self._sats = list(out_sats.values())
+
+    def remove_duplicate_tags(self):
         """removes all duplicate sats after combining tags
         """
         sats: Dict[str, Satellite] = {}
