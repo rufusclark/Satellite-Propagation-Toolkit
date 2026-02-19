@@ -484,8 +484,8 @@ class SatelliteSet:
         self._sats = sats
 
         # filter and analyse data
-        self.remove_duplicate_sats_by_NORAD()
         self.remove_duplicate_tags()
+        self.remove_duplicate_sats_by_NORAD()
         for sat in self.sats:
             sat.generate_debris_tag()
 
@@ -610,13 +610,17 @@ class SatelliteSet:
         from pprint import pprint
         pprint(self.all_tags_dict())
 
-    def print_all_categories(self) -> None:
-        """print all satellite categories with count"""
-        from pprint import pprint
+    def get_all_categories(self) -> dict[str, int]:
+        """return an dictionary of all categories and the number of their satellites in that category"""
         categories = {}
         for sat in self.sats:
             categories[sat.category] = categories.get(sat.category, 0) + 1
-        pprint(categories)
+        return categories
+
+    def print_all_categories(self) -> None:
+        """print all satellite categories with count"""
+        from pprint import pprint
+        pprint(self.get_all_categories())
 
     def print_all_constellations(self, min=2) -> None:
         """print all satellite constellations with count with at least `min` satellites
@@ -635,8 +639,41 @@ class SatelliteSet:
         del constellations[""]
         pprint(constellations)
 
+    def get_by_name(self, name: str) -> Satellite:
+        """get a `Satellite` object by name, for example "ISS (ZARYA)"
 
-class Orbit:
+        Args:
+            name: name of satellite
+
+        Returns:
+            `Satellite` object if found otherwise `None`
+        """
+        for sat in self.sats:
+            if sat.name == name:
+                return sat
+        return None # type: ignore
+
+    def get_by_NORAD_CAT_ID(self, id: int) -> Satellite:
+        """get a `Satellite` object by NORAD CAT ID, for example, 25544 for the ISS
+        
+        Args:
+            id: NORAD CAT ID of satellite
+            
+        Returns:
+            `Satellite` object if found otherwise `None`
+        """
+        for sat in self.sats:
+            if sat.norad_cat_id == id:
+                return sat
+        return None # type: ignore
+    
+    def filter_category(self, category: str) -> Self:
+        """create a new instance of `SatelliteSet` that only includes satellites with category `category`"""
+        is_cat = lambda sat: sat.category == category
+
+        return self.filter(is_cat)
+
+class Orbit:    
     def __init__(self, name: str, alt: float) -> None:
         """represents a typical orbit
 
