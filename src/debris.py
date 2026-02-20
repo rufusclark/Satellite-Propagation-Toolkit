@@ -6,7 +6,6 @@ from .models import Satellite
 from .propagation import SGP4Propagation, ts, OrbitalPosition
 import numpy as np
 
-
 class OutOfBoundError(Exception):
     pass
 
@@ -125,6 +124,8 @@ class _DebrisFluxDataset:
         if (points.size == 0) or np.isnan(points).all():
             return 0.0
         flux_points = self.interpolator(points)
+        if (flux_points.size == 0) or np.isnan(flux_points).all():
+            return 0
         return np.nanmax(flux_points)  # type: ignore
 
     def estimate_average_flux(self, sat: Satellite | OrbitalPosition) -> float:
@@ -136,6 +137,8 @@ class _DebrisFluxDataset:
         if (points.size == 0) or np.isnan(points).all():
             return 0.0
         flux_points = self.interpolator(points)
+        if (flux_points.size == 0) or np.isnan(flux_points).all():
+            return 0
         return np.nanmean(flux_points)  # type: ignore
 
     def _estimate_flux(self, altitude: float, inclination: float) -> float:

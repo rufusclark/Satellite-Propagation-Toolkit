@@ -8,6 +8,7 @@ from csv import DictReader
 
 from skyfield.api import load
 
+from .utility import BackOffManager
 from .models import Satellite, SatelliteSet
 from .sizing import UCSSizingDataset
 
@@ -44,7 +45,6 @@ class NORAD:
     Notes:
         Data is retrieved from CelesTrak
     """
-
     def __init__(self, path: str = "./data/NORAD/", cache_TTL: float = 7.0, filetype: str = "csv") -> None:
         """Object to haddle downloading NORAD data from CelesTrak
 
@@ -60,10 +60,6 @@ class NORAD:
         self.filetype = filetype
         self._sources_by_group = {}
 
-        # CelesTrak retry backoff
-        self.retry_number = 0
-        self.wait_until = 0
-
     def get_source_groups_from_celesTrak(self) -> None:
         """get the source groups from celesTrak and cache the data in a pickle"""
         import requests
@@ -73,28 +69,20 @@ class NORAD:
         url = f"https://celestrak.org/NORAD/elements/index.php?FORMAT={self.filetype}"
         sources_by_group: Dict[str, NORADSource] = {}
 
-        if self.wait_until > time.time():
+        if not BackOffManager.is_ready():
             raise TimeoutError(
-                f"Backing off request to CelesTrak after {self.retry_number} rejected requests for the next {self.wait_until - time.time()} seconds")
+                f"Backing off request to CelesTrak after {BackOffManager.retry_number} rejected requests for the next {BackOffManager.wait_until - time.time()} seconds"
+            )
 
         try:
             # get webpage data and raise HTTPError is the response was unsuccessful
             print("[CelesTrak Source Group] Requesting TLE source groups from CelesTrak")
             response = requests.get(url, timeout=30)
             response.raise_for_status()
-            self.retry_number = 0
+            BackOffManager.request_successful()
         except Exception as e:
-            # update backoff wait period
-            self.retry_number += 1
-
-            MAX_WAIT = 12 * 60 * 60  # 12 hours
-            BACKOFF_FACTOR = 4  # 4 seconds
-
-            backoff_period = min(
-                MAX_WAIT, BACKOFF_FACTOR * 2**(self.retry_number))
-            self.wait_until = time.time() + backoff_period
-
-            print(f"[CelesTrak Source Group] Error: Waiting for {backoff_period}s until next attempt")
+            print(f"[CelesTrak Source Group] Error: {e}")
+            BackOffManager.request_failed()
 
         # parse html
         soup = BeautifulSoup(response.text, "html.parser")
@@ -206,10 +194,15 @@ class NORAD:
             try:
                 filepath = self.path + source.filename
                 if not load.exists(filepath) or load.days_old(filepath) >= self._cache_TTL:
-                    load.download(source.url, filepath)
-                    print(f"[NORAD Data Source] Updated {source.group} NORAD data sources")
+                    if BackOffManager.is_ready():
+                        load.download(source.url, filepath)
+                        print(f"[NORAD Data Source] Updated {source.group} NORAD data sources")
+                        BackOffManager.request_successful()
+                    else:
+                        print(f"[NORAD Data Source] Backing off request to CelesTrak after {BackOffManager.retry_number} rejected requests for the next {BackOffManager.remaining_time()} seconds")
             except Exception as e:
-                print(e)
+                print(f"[NORAD Data Source] Error: {e}")
+                BackOffManager.request_failed()
 
     def load_sats(self, sources: List[NORADSource]) -> SatelliteSet:
         # load specified sources
@@ -262,10 +255,18 @@ class SATCAT:
 
         # update sources
         for source in self.sources:
-            filepath = self.path + source.filename
-            if not load.exists(filepath) or load.days_old(filepath) >= self._cache_TTL:
-                load.download(source.url, filepath)
-                print(f"[SATCAT Data Source] Updated SATCAT data sources")
+            try:
+                filepath = self.path + source.filename
+                if not load.exists(filepath) or load.days_old(filepath) >= self._cache_TTL:
+                    if BackOffManager.is_ready():
+                        load.download(source.url, filepath)
+                        print(f"[SATCAT Data Source] Updated SATCAT data sources")
+                        BackOffManager.request_successful()
+                    else:
+                        print(f"[SATCAT Data Source] Backing off request to CelesTrak after {BackOffManager.retry_number} rejected requests for the next {BackOffManager.remaining_time()} seconds")
+            except Exception as e:
+                print(f"[SATCAT Data Source] Error: {e}")
+                BackOffManager.request_failed()
 
     def load(self) -> Dict[str, Dict]:
         """load all SATCAT data and return n a dict of dicts indexed by sat name

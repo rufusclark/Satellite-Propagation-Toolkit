@@ -36,6 +36,42 @@ def accept_any_datetime(t: ACCEPTABLE_TIME_TYPES) -> Time:
     #     t = t.replace(tzinfo=utc)
     # return ts.from_datetime(t)
 
+class _BackOffManager:
+    """_BackOffManager provides a utility class to assist with backing off outgoing API calls during errors
+
+    Use by importing `BackOffManager`
+    """
+    def __init__(self, max_wait_s: int = 24 * 60 * 60, backoff_factor_s: int = 4) -> None:
+        self.max_wait = max_wait_s
+        self.backoff_factor = backoff_factor_s
+
+        self.retry_number = 0
+        self.wait_until = 0
+
+    def remaining_time(self) -> float:
+        return self.wait_until - time.time()
+
+    def is_ready(self) -> bool:
+        return self.wait_until < time.time()
+
+    def request_failed(self) -> None:
+        self.retry_number += 1
+
+        backoff_period = min(self.max_wait, self.backoff_factor * 2**self.retry_number)
+        self.wait_until = time.time() + backoff_period
+
+        print(f"[Request Failed] Backing off for the next {backoff_period} seconds")
+
+    def request_successful(self) -> None:
+        self.retry_number = 0
+        self.wait_until = 0
+        
+        if self.retry_number > 0:
+            print(f"[Request Failed] Backoff reset")
+
+BackOffManager = _BackOffManager()
+    
+
 
 class ProgressBar:
     def __init__(self, tasks: int) -> None:
