@@ -9,6 +9,7 @@ from csv import DictReader
 from skyfield.api import load
 
 from .models import Satellite, SatelliteSet
+from .sizing import UCSSizingDataset
 
 
 class NORADSource:
@@ -66,7 +67,6 @@ class NORAD:
     def get_source_groups_from_celesTrak(self) -> None:
         """get the source groups from celesTrak and cache the data in a pickle"""
         import requests
-        import requests.exceptions
         from bs4 import BeautifulSoup
         import time
 
@@ -79,10 +79,11 @@ class NORAD:
 
         try:
             # get webpage data and raise HTTPError is the response was unsuccessful
+            print("[CelesTrak Source Group] Requesting TLE source groups from CelesTrak")
             response = requests.get(url, timeout=30)
             response.raise_for_status()
             self.retry_number = 0
-        except (requests.exceptions.RequestException, requests.exceptions.Timeout) as e:
+        except Exception as e:
             # update backoff wait period
             self.retry_number += 1
 
@@ -93,7 +94,9 @@ class NORAD:
                 MAX_WAIT, BACKOFF_FACTOR * 2**(self.retry_number))
             self.wait_until = time.time() + backoff_period
 
-            # parse html
+            print(f"[CelesTrak Source Group] Error: Waiting for {backoff_period}s until next attempt")
+
+        # parse html
         soup = BeautifulSoup(response.text, "html.parser")
 
         for table in soup.find_all('table', class_='striped'):
@@ -116,22 +119,22 @@ class NORAD:
                 print(e)
 
         self._sources_by_group = sources_by_group
-        print("Using source groups from CelesTrak")
+        print("[CelesTrak Source Group] Using source groups from CelesTrak")
 
         # cache groups
         if self._sources_by_group:
             try:
-                with open(f"{self.path}NORAD.pkl", "wb") as f:
+                with open(f"{self.path}NORAD", "wb") as f:
                     pickle.dump(self._sources_by_group, f)
-                    print("NORAD groups cached")
+                    print("[CelesTrak Source Group] NORAD groups cached")
             except Exception as e:
-                print(f"Error caching NORAD groups: {e}")
+                print(f"[CelesTrak Source Group] Error caching NORAD groups: {e}")
 
     def get_source_groups_from_cache(self) -> None:
         """get the source groups from the pickle cache"""
-        with open(f"{self.path}NORAD.pkl", "rb") as f:
+        print("[CelesTrak Source Group] Using locally cached source groups")
+        with open(f"{self.path}NORAD", "rb") as f:
             self._sources_by_group = pickle.load(f)
-        print("Using cached source groups")
 
     def get_source_groups_from_historic_data(self) -> None:
         """get the source groups from historical data - this may not download all current data"""
@@ -142,7 +145,7 @@ class NORAD:
             **{group: NORADSource(group, "scientific", self.filetype) for group in ["science", "geodetic", "engineering", "education"]},
             **{group: NORADSource(group, "miscellaneous", self.filetype) for group in ["military", "radar", "cubesat", "other"]},
             **{group: NORADSource(group, "special-interest", self.filetype) for group in ["stations", "visual", "active", "analyst", "cosmos-1408-debris", "fengyun-1c-debris", "iridium-33-debris", "cosmos-2251-debris"]}}
-        print("Using historical source groups (Some satellites may be missing or missing metadata)")
+        print("[CelesTrak Source Group] Using historical source groups (Some satellites may be missing or missing metadata)")
 
     def get_source_groups(self) -> None:
         try:
@@ -150,7 +153,7 @@ class NORAD:
             return
         except Exception as e:
             print(
-                f"Exception occurred whilst getting source groups from cache. This may be because the cache hasn't been created yet: {e}\nContinuing as expected..."
+                f"[CelesTrak Source Group] Exception occurred whilst getting source groups from cache. This may be because the cache hasn't been created yet: {e}\nContinuing as expected..."
             )
 
         try:
@@ -158,7 +161,7 @@ class NORAD:
             return
         except Exception as e:
             print(
-                f"Exception occurred whilst getting source groups from CelesTrak. This may be due to network issues: {e}\nContinuing as expected..."
+                f"[CelesTrak Source Group] Exception occurred whilst getting source groups from CelesTrak. This may be due to network issues: {e}\nContinuing as expected..."
             )
 
         try:
@@ -166,10 +169,10 @@ class NORAD:
             return
         except Exception as e:
             print(
-                f"Exception occurred whilst getting source groups from historic data. {e}"
+                f"[CelesTrak Source Group] Exception occurred whilst getting source groups from historic data. {e}"
             )
 
-        raise RuntimeError("Unable to get source groups")
+        raise RuntimeError("[CelesTrak Source Group] Unable to get source groups")
 
     def source_by_group(self, group: str) -> NORADSource:
         return self._sources_by_group[group]
@@ -192,7 +195,7 @@ class NORAD:
                 try:
                     filepath = self.path + source.filename
                     if not load.exists(filepath) or load.days_old(filepath) >= self._cache_TTL:
-                        print("NORAD groups out-of-date: updating from CelesTrak")
+                        print("[NORAD Data Source] NORAD groups out-of-date: updating from CelesTrak")
                         self.get_source_groups_from_celesTrak()
                         break
                 except Exception as e:
@@ -204,7 +207,7 @@ class NORAD:
                 filepath = self.path + source.filename
                 if not load.exists(filepath) or load.days_old(filepath) >= self._cache_TTL:
                     load.download(source.url, filepath)
-                    print(f"Updated {source.group} NORAD data sources")
+                    print(f"[NORAD Data Source] Updated {source.group} NORAD data sources")
             except Exception as e:
                 print(e)
 
@@ -221,11 +224,11 @@ class NORAD:
                     fields, source.group, source.category
                 ) for fields in data])
                 print(
-                    f"Loaded {source.group} NORAD data sources {' '*40}",
+                    f"[NORAD Data Source] Loaded {source.group} NORAD data sources {' '*40}",
                     end="\r"
                 )
 
-        print(f"Loaded all {len(sources)} NORAD data sources {' '*40}")
+        print(f"[NORAD Data Source] Loaded all {len(sources)} NORAD data sources {' '*40}")
 
         return SatelliteSet(sats)
 
@@ -259,7 +262,7 @@ class SATCAT:
             filepath = self.path + source.filename
             if not load.exists(filepath) or load.days_old(filepath) >= self._cache_TTL:
                 load.download(source.url, filepath)
-                print(f"Updated SATCAT data sources")
+                print(f"[SATCAT Data Source] Updated SATCAT data sources")
 
     def load(self) -> Dict[str, Dict]:
         """load all SATCAT data and return n a dict of dicts indexed by sat name
@@ -275,7 +278,7 @@ class SATCAT:
                 data = list(DictReader(f))
 
                 sats.extend(data)
-                print(f"Loaded {source.filename} SATCAT data source")
+                print(f"[SATCAT Data Source] Loaded {source.filename} SATCAT data source")
 
         return {sat['OBJECT_NAME']: sat for sat in sats}
 
@@ -532,5 +535,8 @@ def init_sats(*, update_sources: bool = True) -> SatelliteSet:
 
     # sort sats by name
     sats.sort()
+
+    # train mass interpolation algorithms on dataset
+    UCSSizingDataset.build_interpolators(sats)
 
     return sats

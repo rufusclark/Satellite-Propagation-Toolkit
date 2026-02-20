@@ -55,12 +55,18 @@ log_ips = False  # whether to log IP addresses in the tracking database - consid
 # key value pair for selecting the appropriate model for satellite sets
 """
 Insert more MOCAT model files with keys here to expose them via the API
+
+All keys should be lowercase
 """
 MODEL_FILES = {
     "live": "live",
     "initial orbital capacity": "./data/MOCAT/initial orbital capacity.csv",
     "continue launch rate": "./data/MOCAT/results_Su_max_launch_2025.csv",
-    "predicted mega constellations": "./data/MOCAT/results_Su_predict_launch_mega_2025.csv"
+    "predicted mega constellations": "./data/MOCAT/results_Su_predict_launch_mega_2025.csv",
+    "sep1: no new launches": "./data/MOCAT/SEP1_formatted.csv",
+    "sep2: continue current launches": "./data/MOCAT/SEP2_formatted.csv",
+    "sep3m: space winter": "./data/MOCAT/SEP3m_formatted.csv",
+    "sep6h: intense growth and sustainability": "./data/MOCAT/SEP6h_formatted.csv"
 }
 
 """
@@ -69,7 +75,7 @@ Insert more MOCAT model files above
 MODELS = list(MODEL_FILES.keys())
 ALLOWED_MODELS = [*MODELS, "future"]
 FORMATS = ["cartesian", "keplerian"]
-YEARS = [i for i in range(0, 105, 5)]
+YEARS = [i for i in range(0, 55, 5)]
 
 
 def get_db() -> sqlite3.Connection:  # type: ignore
@@ -173,6 +179,9 @@ def get_output(
     Returns:
         Flask.Response(): formatted json response
     """
+    # make lower case
+    model = model.lower()
+
     # enforce years if live
     if model == "live":
         years = 0
@@ -200,7 +209,7 @@ def get_output(
 
     # get the correct satellite set based on the model
     if model == "live":
-        sats = init_sats()
+        sats = init_sats(update_sources=False)
     else:
         sats = future.MOCATReader(MODEL_FILES[model]).read_yrs(
             years).to_SatelliteSet()

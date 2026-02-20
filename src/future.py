@@ -25,6 +25,10 @@ class OrbitalCapacity:
         self.years = years
         self.altitude_bands = altitude_bands
 
+    @property
+    def max_altitude_band(self) -> float:
+        return max([band.high for band in self.altitude_bands])
+
     def plot(self) -> None:
         import matplotlib.pyplot as plt
 
@@ -40,7 +44,7 @@ class OrbitalCapacity:
         plt.grid(True)
         plt.show()
 
-    def to_SatelliteSet(self, training_set: Optional[SatelliteSet] = None, *, training_set_bias: float = 0.5) -> SatelliteSet:
+    def to_SatelliteSet(self, training_set: Optional[SatelliteSet] = None, *, training_set_bias: float = 0.5, include_missing_altitudes: bool = True) -> SatelliteSet:
         """generate a new set of Satellites (`SatelliteSet`) based upon the provided training set or all active satellites if not provided.
 
         this makes the following assumptions when generating the new `SatelliteSet`:
@@ -53,6 +57,7 @@ class OrbitalCapacity:
         Args:
             training_set: `SatelliteSet` to use as a basis for distribution. Defaults to None.
             training_set_bias: How much influence should the training set have on future sat RAAN and mean anomaly [0, 1]. Defaults to 0.5.
+            include_missing_altitudes: Whether to include the training data set above the maximum altitude with a population provided by the MOCAT data
 
         Returns:
             new `SatelliteSet`
@@ -162,6 +167,12 @@ class OrbitalCapacity:
                 category=f"{self.years:.0f} year estimate"
             ) for i in range(total_capacity)
         ]
+
+        # add the sats above the threshold back in
+        if include_missing_altitudes:
+            threshold_alt = self.max_altitude_band
+            above_threshold_sats = [sat for sat, pos in zip(training_set.sats, training_orbital_positions) if pos.semi_minor_axis > threshold_alt]
+            sats.extend(above_threshold_sats)
 
         return SatelliteSet(sats)
 

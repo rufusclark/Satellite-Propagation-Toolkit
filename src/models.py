@@ -316,6 +316,25 @@ class Satellite:
         """revelotion number at epoch [Revs]"""
         return self._sat.model.revnum
 
+    @property
+    def launch_mass(self) -> float:
+        """return the launch mass from existing datasets or interpolated from similar satellites by category and altitude
+
+        Returns:
+            launch mass in kg
+        """
+        from .sizing import UCSSizingDataset
+        return UCSSizingDataset.get_mass(self)
+    
+    @property
+    def drag_approximate_cross_sectional_area(self) -> float:
+        """the derived cross-sectional area [m^2] of the spacecraft normal to drag calculated from the launch mass and the ballistic starred drag coefficient (BSTAR).
+
+        this is a very approximate value but should be representative, comparing within a dataset
+        """
+        return (2 * self.b_star * self.launch_mass) / (0.156996 * 2.2)
+
+
     def details_to_dict(self) -> dict:
         return {
             "details": {

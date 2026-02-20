@@ -34,6 +34,7 @@ The core features of the project are:
 * Estimate a realistic future space environment based on the [MOCAT tool](https://github.com/ARCLab-MIT/MOCAT-SSEM)
 * Displaying generated images on [supported devices](#hardware-operations) whilst tethered to a PC or standalone
 * Support for spacecraft and constellation coverage and revisit modelling
+* Estimate satellite mass using first order approximations and existing datasets [UCS](https://www.ucs.org/resources/satellite-database)
 
 ![500deg Topocentric Projection about 0N, 0E](images/md/0,0%20TOPO%20500deg%20400x400.png)
 <!-- Include images of hardware - massive panel -->

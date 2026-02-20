@@ -133,6 +133,11 @@ class OrbitalPosition:
         """estimate the average debris flux [#/m²/year] for this orbital position based on its orbital parameters estimated from TLE using the SPG4 model"""
         from .debris import debrisFluxDataset
         return debrisFluxDataset.estimate_average_flux(self)
+    
+    @property
+    def semi_minor_axis(self) -> float:
+        """semi minor axis [km]"""
+        return self.a * math.sqrt(1 - self.e)
 
     semi_major_axis = a
     eccentricity = e
