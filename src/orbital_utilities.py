@@ -1,7 +1,6 @@
 import numpy as np
 from .const import *
 
-
 def true_to_mean_anomaly(nu, e):
     """
     Convert true anomaly (nu) to mean anomaly (M) for elliptical orbits.
@@ -52,3 +51,37 @@ def sso_inclination(alt_km, e=0.0):
     i_deg = np.degrees(i_rad)
 
     return i_deg
+
+def find_clusters(orbital_positions, threshold_km) -> None:
+    """print a list of all satellites within a threshold number of km of each other
+
+    this function is slow and not optimised
+
+    Args:
+        orbital_positions: set of orbital positions, `list[OrbitalPosition]` object
+        threshold_km: distance km
+    """
+    print(f"Searching {len(orbital_positions)} satellite positions for cluster groups with {threshold_km}km")
+
+    pairs = []
+    paired: list[str] = []
+    for i in range(len(orbital_positions)):
+        pairs_temp = [orbital_positions[i]]
+        for j in range(i + 1, len(orbital_positions)):
+            p0 = orbital_positions[i]
+            p1 = orbital_positions[j]
+            if p1.sat.name in paired:
+                continue
+            if p0.geo.distance(p1.geo) <= threshold_km:
+                pairs_temp.append(p1)
+                paired.append(p1.sat.name)
+        if len(pairs_temp) > 1:
+            pairs.append(pairs_temp)
+        n = len(pairs_temp)
+        end = "\r" if n == 1 else "\n"
+        print(
+            f"sat n={i}, pairs={len(pairs_temp)-1} {"names=" if n>1 else ""}{[s.sat.name for s in pairs_temp] if n > 1 else ""} {"ids=" if n>1 else ""}{[s.sat.norad_cat_id for s in pairs_temp] if n > 1 else ""}",
+            end=end
+        )
+
+    print(f"Found {len(pairs)} cluster groups within {threshold_km}km")
