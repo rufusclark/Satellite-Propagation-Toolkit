@@ -304,6 +304,9 @@ with app.app_context():
 @app.route("/")
 def root():
     """return basic api status including cache status"""
+    max_expire_unix = None
+    cache_expire_time = "unknown"
+    cache_status = "unknown"
     try:
         db = get_db()
         cur = db.cursor()
@@ -317,7 +320,6 @@ def root():
         print(e)
         traceback.print_tb(e.__traceback__)
         print("Continuing...")
-        # TODO: handle errors more usefully
         max_expire_unix = None
         cache_expire_time = "unknown"
         cache_status = "unknown"
