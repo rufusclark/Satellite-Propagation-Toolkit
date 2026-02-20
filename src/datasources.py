@@ -217,16 +217,19 @@ class NORAD:
 
         for source in sources:
             filepath = self.path + source.filename
-            with load.open(filepath, mode="r") as f:
-                data = list(DictReader(f))
+            try:
+                with load.open(filepath, mode="r") as f:
+                    data = list(DictReader(f))
 
-                sats.extend([Satellite.from_tle(
-                    fields, source.group, source.category
-                ) for fields in data])
-                print(
-                    f"[NORAD Data Source] Loaded {source.group} NORAD data sources {' '*40}",
-                    end="\r"
-                )
+                    sats.extend([Satellite.from_tle(
+                        fields, source.group, source.category
+                    ) for fields in data])
+                    print(
+                        f"[NORAD Data Source] Loaded {source.group} NORAD data sources {' '*40}",
+                        end="\r"
+                    )
+            except Exception as e:
+                print(f"[NORAD Data Source] Error loading {source.group} NORAD data sources")
 
         print(f"[NORAD Data Source] Loaded all {len(sources)} NORAD data sources {' '*40}")
 
