@@ -71,7 +71,7 @@ class NORAD:
 
         if not BackOffManager.is_ready():
             raise TimeoutError(
-                f"Backing off request to CelesTrak after {BackOffManager.retry_number} rejected requests for the next {BackOffManager.wait_until - time.time()} seconds"
+                f"Backing off request to CelesTrak after {BackOffManager.retry_number} rejected requests for the next {BackOffManager.wait_until - time.time():.2f} seconds"
             )
 
         try:

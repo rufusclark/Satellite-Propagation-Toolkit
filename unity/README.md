@@ -29,7 +29,13 @@ Additional MOCAT datasets can be integrated with this API by adding the filepath
 
 #### Endpoints
 
-* Route (/) - returns device status in json
+* Route (/)
+
+```html
+API is running
+```
+
+* Route (/status) - returns device status in json
 
 ```json
 {

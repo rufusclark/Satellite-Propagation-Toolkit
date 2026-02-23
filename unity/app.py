@@ -300,9 +300,12 @@ def cache_updator():
 with app.app_context():
     print(f"{app.debug=}")
 
-
 @app.route("/")
 def root():
+    return "API is running", 200
+
+@app.route("/status")
+def status():
     """return basic api status including cache status"""
     max_expire_unix = None
     cache_expire_time = "unknown"
@@ -461,11 +464,10 @@ def start_time():
 @app.after_request
 def log_request(response: Response) -> Response:
     duration_ms = (time.time() - g.start_time) * 1000
-    print(f"[{datetime.datetime.now()}] Served: {request.path} in {duration_ms:.2f} ms")
+    ip: str = request.headers.get("X-Forwarded-For", request.remote_addr)  # type: ignore
+    user_agent = request.headers.get("User-Agent", "")
+    print(f"[{datetime.datetime.now()}] Served: {request.path} in {duration_ms:.2f} ms (ip={ip}, agent={user_agent})")
     if log_ips:
-        user_agent = request.headers.get("User-Agent", "")
-        ip: str = request.headers.get(
-            "X-Forwarded-For", request.remote_addr)  # type: ignore
         try:
             import geocoder
             p = geocoder.ipinfo(ip)
