@@ -463,7 +463,8 @@ def start_time():
 
 @app.after_request
 def log_request(response: Response) -> Response:
-    duration_ms = (time.time() - g.start_time) * 1000
+    start = getattr(g, "start_time", None)
+    duration_ms = (time.time() - g.start_time) * 1000 if start else 0
     ip: str = request.headers.get("X-Forwarded-For", request.remote_addr)  # type: ignore
     user_agent = request.headers.get("User-Agent", "")
     print(f"[{datetime.datetime.now()}] Served: {request.path} in {duration_ms:.2f} ms (ip={ip}, agent={user_agent})")
