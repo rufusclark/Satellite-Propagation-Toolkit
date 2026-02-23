@@ -168,13 +168,21 @@ class OrbitalCapacity:
             ) for i in range(total_capacity)
         ]
 
+        sats = SatelliteSet(sats)
+
         # add the sats above the threshold back in
         if include_missing_altitudes:
-            threshold_alt = self.max_altitude_band
-            above_threshold_sats = [sat for sat, pos in zip(training_set.sats, training_orbital_positions) if pos.semi_minor_axis > threshold_alt]
-            sats.extend(above_threshold_sats)
+            t = ts.now()
 
-        return SatelliteSet(sats)
+            threshold_alt = self.max_altitude_band
+            
+            above_threshold_sats = training_set.filter(
+                lambda sat: SGP4Propagation()._propagate(sat, t).geo.alt > threshold_alt # type: ignore
+            )
+
+            return above_threshold_sats + sats
+        else:
+            return sats
 
 
 class AltitudeBand:

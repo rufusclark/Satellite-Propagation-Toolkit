@@ -214,7 +214,7 @@ def get_output(
         sats = init_sats(update_sources=False)
     else:
         sats = future.MOCATReader(MODEL_FILES[model]).read_yrs(
-            years).to_SatelliteSet()
+            years).to_SatelliteSet(init_sats(update_sources=False))
 
     # get satellite orbital positions
     positions = SGP4Propagation().propagate(sats, ts.now())
