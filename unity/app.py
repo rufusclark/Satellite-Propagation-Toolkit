@@ -8,6 +8,7 @@ from src import *
 
 import time
 import math
+import gzip
 import json
 import sqlite3
 import traceback
@@ -74,11 +75,12 @@ Insert more MOCAT model files above
 """
 MODELS = list(MODEL_FILES.keys())
 ALLOWED_MODELS = [*MODELS, "future"]
-FORMATS = ["cartesian", "keplerian"]
+# FORMATS = ["cartesian", "keplerian"]
+FORMATS = ["cartesian"]
 YEARS = [i for i in range(0, 55, 5)]
 
 
-def get_db() -> sqlite3.Connection:  # type: ignore
+def get_cache_db() -> sqlite3.Connection:  # type: ignore
     if "db" not in g:
         g.db = sqlite3.connect(DATABASE)
         g.db.execute("""
@@ -88,7 +90,7 @@ def get_db() -> sqlite3.Connection:  # type: ignore
                      format TEXT NOT NULL,
                      model TEXT NOT NULL,
                      expire_unix INTEGER NOT NULL,
-                     data TEXT
+                     data BLOB
                 )
         """)
         g.db.commit()
@@ -164,7 +166,7 @@ def get_output(
     *,
     _remove_empty_keys: bool = True,
     _current_time: float | None = None
-) -> Response:
+):
     """handle request for satellites sets from the API.
 
     handles input validation, checks sqlite3 cache and return cache or generates new outputs and returns/caches it
@@ -177,7 +179,7 @@ def get_output(
         _current_time: overwrite the current time for cache validation - supports generating new caches before they expire. Defaults to None.
 
     Returns:
-        Flask.Response(): formatted json response
+        gzip compressed content for the request
     """
     # make lower case
     model = model.lower()
@@ -195,15 +197,15 @@ def get_output(
         _current_time = time.time()
 
     # check sqlite cache
-    db = get_db()
+    db = get_cache_db()
     row = db.execute(
         "SELECT data FROM cache WHERE year = ? AND format = ? AND model = ? AND expire_unix > ?", (years, format, model, _current_time)).fetchone()
     print(
         f"[{datetime.datetime.now()}] sats request {years=} {format=} {model=} served-cached-response={row is not None}")
     if row:
-        # return cached response
+        compressed_bytes = row[0]
+        return compressed_bytes
         # print(f"Returned response from cache")
-        return Response(row[0].encode("utf-8"), content_type="application/json")
 
     # compute as not cached
 
@@ -273,14 +275,17 @@ def get_output(
     # convert to json
     json_out = json.dumps(out)
 
+    # compress
+    compressed_bytes = gzip.compress(json_out.encode("utf-8"))
+
     # cached the response
     db.execute(f"DELETE FROM cache WHERE expire_unix < {time.time()}")
     db.execute("INSERT OR REPLACE INTO cache (year, format, model, expire_unix, data) VALUES (?, ?, ?, ?, ?)",
-               (years, format, model, time.time()+60*60*24*CACHE_TTL, json_out))
+               (years, format, model, time.time()+60*60*24*CACHE_TTL, compressed_bytes))
     db.commit()
     # print(f"Response computed live and cached for future calls")
 
-    return Response(json_out, content_type="application/json")
+    return compressed_bytes
 
 
 def cache_updator():
@@ -311,7 +316,7 @@ def status():
     cache_expire_time = "unknown"
     cache_status = "unknown"
     try:
-        db = get_db()
+        db = get_cache_db()
         cur = db.cursor()
         cur.execute("SELECT MAX(expire_unix) FROM cache")
         max_expire_unix = cur.fetchone()[0]
@@ -373,13 +378,28 @@ def sats():
         return jsonify({"error": "year out of range"}), 400
 
     try:
-        return get_output(
+        compressed_data = get_output(
             years=int(round(year, 1)),
             model=model,
             format=format
-        ), 200
+        )
+
+        accept_encoding = request.headers.get("Accept-Encoding", "")
+        supports_gzip = "gzip" in accept_encoding.lower()
+
+        if supports_gzip:
+            # send compressed bytes directly
+            response = Response(compressed_data, content_type="application/json")
+            response.headers["Content-Encoding"] = "gzip"
+            return response, 200
+        else:
+            # decompress before sending
+            json_out = gzip.decompress(compressed_data).decode("utf-8")
+            response = Response(json_out, content_type="application/json")
+            return response, 200
     except Warning as e:
-        return jsonify({"error": str(e)}), 400
+        # handle error
+        return "error", 400
 
 
 @limiter.limit("10 per minute")
