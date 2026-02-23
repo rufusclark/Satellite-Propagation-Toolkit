@@ -1,5 +1,11 @@
 # Setup Commands
 
+Start up process (for each process)
+
+1. Attach to tmux session
+2. Enter venv
+3. Start process
+
 ## GitHub
 
 ### Clone repo
