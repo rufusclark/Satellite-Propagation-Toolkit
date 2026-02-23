@@ -24,3 +24,6 @@ docs/
 
 # C# dev
 *.sln
+
+# Coverage dir
+coverage/
