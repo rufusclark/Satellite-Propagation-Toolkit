@@ -16,7 +16,7 @@ import datetime
 
 from flask import Flask, jsonify, request, Response, g
 from flask_compress import Compress
-from flask_limiter import Limiter
+from flask_limiter import Limiter, RateLimitExceeded
 from flask_limiter.util import get_remote_address
 
 from markupsafe import escape
@@ -525,13 +525,17 @@ def log_request(response: Response) -> Response:
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    print(e)
-    traceback.print_tb(e.__traceback__)
-    print("Continuing...")
-    if app.debug:
-        return jsonify({"error": str(e)}), 500
+    if isinstance(e, RateLimitExceeded):
+        print(f"Rate Limit Exceeded: {e}")
+        return "Rate Limit Exceeded", 500
     else:
-        return jsonify({"error": ""}), 500
+        print(e)
+        traceback.print_tb(e.__traceback__)
+        print("Continuing...")
+        if app.debug:
+            return jsonify({"error": str(e)}), 500
+        else:
+            return "Error", 500
 
 
 if __name__ == "__main__":
