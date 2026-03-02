@@ -125,9 +125,9 @@ def get_tracking_db() -> sqlite3.Connection:  # type: ignore
 
 
 def cleanup_db(path, table):
-    # Delete 1000 records if the file size is larger than 2GB
+    # Delete 1000 records if the file size is larger than 200 MB
     size = os.path.getsize(path)
-    if size < 2 * 1024**3:  # 2GB
+    if size < 200 * 1024**2:  # 200 MB
         return  # nothing to do
 
     db = sqlite3.connect(path)
