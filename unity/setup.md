@@ -11,7 +11,7 @@ Start up process (for each process)
 ### Clone repo
 
 ```bash
-git clone git@github.com:rufusclark/Satellite-Propagation-Toolkit.git
+git clone https://github.com/rufusclark/Satellite-Propagation-Toolkit.git
 ```
 
 ### Update repo
@@ -66,7 +66,7 @@ python3 -m venv venv
 ### Activate venv
 
 ```bash
-source venv\bin\activate
+source venv/bin/activate
 ```
 
 ### Deactivate venv
@@ -88,7 +88,7 @@ pip install -r requirements.txt
 ### Run cache updator (from project root)
 
 ```bash
-python3 .\unity\update_cache.py
+python3 ./unity/update_cache.py
 ```
 
 ### Run API (from project root)

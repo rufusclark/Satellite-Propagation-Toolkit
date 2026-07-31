@@ -31,11 +31,12 @@ def get_next_id():
 
 
 class Satellite:
-    def __init__(self, sat: EarthSatellite, group: str = "", category: str = "") -> None:
+    def __init__(self, sat: EarthSatellite, group: str = "", category: str = "", object_id: str = "") -> None:
         self.tags = list(filter(None, [group.lower(), category.lower()]))
         self._sat = sat
         self.group = group.lower()
         self.category = category.lower()
+        self.object_id = object_id
         self._object_type = None
         self._ops_status = None
         self._owner = None
@@ -50,7 +51,8 @@ class Satellite:
         return cls(
             sat=EarthSatellite.from_omm(ts, fields),
             group=group,
-            category=category
+            category=category,
+            object_id=fields["OBJECT_ID"]
         )
 
     @classmethod

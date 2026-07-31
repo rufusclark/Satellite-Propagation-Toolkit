@@ -76,7 +76,8 @@ Insert more MOCAT model files above
 MODELS = list(MODEL_FILES.keys())
 ALLOWED_MODELS = [*MODELS, "future"]
 # FORMATS = ["cartesian", "keplerian"]
-FORMATS = ["cartesian"]
+# FORMATS = ["cartesian"]
+FORMATS = ["xml"]
 YEARS = [i for i in range(0, 55, 5)]
 
 
@@ -219,64 +220,141 @@ def get_output(
     # get satellite orbital positions
     positions = SGP4Propagation().propagate(sats, ts.now())
 
-    # !: TLE/SGP4 is not currently supported
-    # generate the output based on the format
-    out = [
-        {
-            "name": position.sat.name,
-            "category": position.sat.category,
-            "launch date": position.sat.launch_date.isoformat() if isinstance(position.sat.launch_date, datetime.datetime) else "",
-            "launch site": position.sat.launch_site,
-            "launch country": position.sat.launch_country,
-            "object type": position.sat.object_type,
-            "operational status": position.sat.operational_status,
-            "owner": position.sat.owner,
-            "owner country": position.sat.owner_country,
-            "constellation": position.sat.constellation,
-            "max flux debris density": position.max_flux_debris_density,
-            "avg flux debris density": position.avg_flux_debris_density,
-            "orbit type": position.altitude_tag(),
-            "tags": [tag for tag in position.sat.tags if tag.lower() not in [position.sat.category.lower(), (position.sat.operational_status or "").lower(), (position.sat.launch_site or "").lower(), (position.sat.launch_country or "").lower(), (position.sat.object_type or "").lower(), (position.sat.owner or "").lower(), ""]],
-            **({
-                "a": position.semi_major_axis,
-                "e": position.eccentricity,
-                "i": position.inclination,
-                "Omega": position.Omega,
-                "omega": position.omega,
-                "M_0": position.mean_anomaly,
-                "t_0": position._time.utc_iso(),
-                "theta_g0": KeplerianPropagation._greenwich_sidereal_angle(position.sat.epoch)
-            } if format == "keplerian" else {}
-            ),
-            **({
-                "x": position.geo.x,
-                "y": position.geo.y,
-                "z": position.geo.z,
-                "x_v": position.geo.x_v,
-                "y_v": position.geo.y_v,
-                "z_v": position.geo.z_v,
-                "e": position.eccentricity,
-                "i": position.inclination,
-                "t_0": position._time.utc_iso()
-            } if format == "cartesian" and not math.isnan(position.geo.x) else {}
-            ),
-            **({
-                "tle": position.sat.to_tle()
-            } if format == "sgp4" else {}
-            )
-        }
-        for position in positions if True
-    ]
+    if format in ["cartesian", "keplerian", "sgp4"]:
 
-    # remove empty value's keys
-    if _remove_empty_keys:
-        out = [{k: v for k, v in sat_out.items() if v} for sat_out in out]
+        # !: TLE/SGP4 is not currently supported
+        # generate the output based on the format
+        out_dict = [
+            {
+                "name": position.sat.name,
+                "category": position.sat.category,
+                "launch date": position.sat.launch_date.isoformat() if isinstance(position.sat.launch_date, datetime.datetime) else "",
+                "launch site": position.sat.launch_site,
+                "launch country": position.sat.launch_country,
+                "object type": position.sat.object_type,
+                "operational status": position.sat.operational_status,
+                "owner": position.sat.owner,
+                "owner country": position.sat.owner_country,
+                "constellation": position.sat.constellation,
+                "max flux debris density": position.max_flux_debris_density,
+                "avg flux debris density": position.avg_flux_debris_density,
+                "orbit type": position.altitude_tag(),
+                "tags": [tag for tag in position.sat.tags if tag.lower() not in [position.sat.category.lower(), (position.sat.operational_status or "").lower(), (position.sat.launch_site or "").lower(), (position.sat.launch_country or "").lower(), (position.sat.object_type or "").lower(), (position.sat.owner or "").lower(), ""]],
+                **({
+                    "a": position.semi_major_axis,
+                    "e": position.eccentricity,
+                    "i": position.inclination,
+                    "Omega": position.Omega,
+                    "omega": position.omega,
+                    "M_0": position.mean_anomaly,
+                    "t_0": position._time.utc_iso(),
+                    "theta_g0": KeplerianPropagation._greenwich_sidereal_angle(position.sat.epoch)
+                } if format == "keplerian" else {}
+                ),
+                **({
+                    "x": position.geo.x,
+                    "y": position.geo.y,
+                    "z": position.geo.z,
+                    "x_v": position.geo.x_v,
+                    "y_v": position.geo.y_v,
+                    "z_v": position.geo.z_v,
+                    "e": position.eccentricity,
+                    "i": position.inclination,
+                    "t_0": position._time.utc_iso()
+                } if format == "cartesian" and not math.isnan(position.geo.x) else {}
+                ),
+                **({
+                    "tle": position.sat.to_tle()
+                } if format == "sgp4" else {}
+                )
+            }
+            for position in positions if True
+        ]
 
-    # convert to json
-    json_out = json.dumps(out)
+        # remove empty value's keys
+        if _remove_empty_keys:
+            out_dict = [{k: v for k, v in sat_out.items() if v} for sat_out in out_dict]
+
+        # convert to json
+        out = json.dumps(out_dict)
+
+    elif format == "xml":
+        import xml.etree.ElementTree as ET
+
+        root = ET.Element("ndm", {
+            "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+            "xsi:noNamespaceSchemaLocation":
+                "https://sanaregistry.org/r/ndmxml_unqualified/ndmxml-3.0.0-master-3.0.xsd"
+        })
+
+        for position in positions:
+            if not position:
+                return
+            sat = position.sat
+
+            omm = ET.SubElement(root, "omm", {
+                "id": "CCSDS_OMM_VERS",
+                "version": "3.0"
+            })
+
+            header = ET.SubElement(omm, "header")
+            ET.SubElement(header, "COMMENT").text = "GENERATED VIA SATVIS API"
+            ET.SubElement(header, "CREATION_DATE")
+            ET.SubElement(header, "ORIGINATOR")
+
+            body = ET.SubElement(omm, "body")
+            segment = ET.SubElement(body, "segment")
+
+            metadata = ET.SubElement(segment, "metadata")
+            ET.SubElement(metadata, "OBJECT_NAME").text = sat.name
+            ET.SubElement(metadata, "OBJECT_ID").text = sat.object_id
+            ET.SubElement(metadata, "CENTER_NAME").text = "EARTH"
+            ET.SubElement(metadata, "REF_FRAME").text = "TEME"
+            ET.SubElement(metadata, "TIME_SYSTEM").text = "UTC"
+            ET.SubElement(metadata, "MEAN_ELEMENT_THEORY").text = "SGP4"
+
+            data = ET.SubElement(body, "data")
+
+            fmt_float = lambda x: f"{x:.20f}".rstrip("0").rstrip(".")
+
+            mean_elements = ET.SubElement(data, "meanElements")
+            ET.SubElement(mean_elements, "EPOCH").text = sat.epoch.isoformat() if isinstance(sat.epoch, datetime.datetime) else ""
+            ET.SubElement(mean_elements, "MEAN_MOTION").text = fmt_float(sat.mean_motion)
+            ET.SubElement(mean_elements, "ECCENTRICITY").text = fmt_float(sat.eccentricity)
+            ET.SubElement(mean_elements, "INCLINATION").text = fmt_float(sat.inclination)
+            ET.SubElement(mean_elements, "RA_OF_ASC_NODE").text = fmt_float(sat.right_ascension_of_ascending_node)
+            ET.SubElement(mean_elements, "ARG_OF_PERICENTER").text = fmt_float(sat.argument_of_perigee)
+            ET.SubElement(mean_elements, "MEAN_ANOMALY").text = fmt_float(sat.mean_anomaly)
+
+            tle_parameters = ET.SubElement(data, "tleParameters")
+            ET.SubElement(tle_parameters, "EPHEMERIS_TYPE").text = "0"
+            ET.SubElement(tle_parameters, "CLASSIFICATION_TYPE").text = "U"
+            ET.SubElement(tle_parameters, "NORAD_CAT_ID").text = fmt_float(sat.norad_cat_id)
+            ET.SubElement(tle_parameters, "ELEMENT_SET_ID").text = fmt_float(sat.element_set_no)
+            ET.SubElement(tle_parameters, "REV_AT_EPOCH").text = fmt_float(sat.revolution_number_at_epoch)
+            ET.SubElement(tle_parameters, "BSTAR").text = fmt_float(sat.b_star)
+            ET.SubElement(tle_parameters, "MEAN_MOTION_DOT").text = fmt_float(sat.ndot)
+            ET.SubElement(tle_parameters, "MEAN_MOTION_DDOT").text = fmt_float(0.0)
+
+            user_defined_params = ET.SubElement(data, "userDefinedParameters")
+            u_param = lambda x: ET.SubElement(user_defined_params, "USER_DEFINED", {"parameter": x})
+            u_param("CATEGORY").text = sat.category
+            u_param("LAUNCH_DATE").text = sat.launch_date.isoformat() if isinstance(sat.launch_date, datetime.datetime) else ""
+            u_param("SITE").text = sat.launch_site
+            u_param("OBJECT_TYPE").text = sat.object_type
+            u_param("OWNER").text = sat.owner
+            u_param("CONSTELLATION").text = sat.constellation
+            u_param("MAX_FLUX_DEBRIS_DENSITY").text = fmt_float(position.max_flux_debris_density)
+            u_param("AVG_FLUX_DEBRIS_DENSITY").text = fmt_float(position.avg_flux_debris_density)
+
+            for tag in position.sat.tags:
+                if tag.lower() not in [position.sat.category.lower(), (position.sat.operational_status or "").lower(), (position.sat.launch_site or "").lower(), (position.sat.launch_country or "").lower(), (position.sat.object_type or "").lower(), (position.sat.owner or "").lower(), ""]:
+                    u_param("TAG").text = tag
+
+        out = ET.tostring(root, encoding="unicode", xml_declaration=True)
 
     # compress
-    compressed_bytes = gzip.compress(json_out.encode("utf-8"))
+    compressed_bytes = gzip.compress(out.encode("utf-8"))
 
     # cached the response
     db.execute(f"DELETE FROM cache WHERE expire_unix < {time.time()}")
@@ -286,7 +364,6 @@ def get_output(
     # print(f"Response computed live and cached for future calls")
 
     return compressed_bytes
-
 
 def cache_updator():
     """updates all caches blocking"""
@@ -387,15 +464,17 @@ def sats():
         accept_encoding = request.headers.get("Accept-Encoding", "")
         supports_gzip = "gzip" in accept_encoding.lower()
 
+        content_type = "application/xml" if format == "xml" else "application/json"
+
         if supports_gzip:
             # send compressed bytes directly
-            response = Response(compressed_data, content_type="application/json")
+            response = Response(compressed_data, content_type=content_type)
             response.headers["Content-Encoding"] = "gzip"
             return response, 200
         else:
             # decompress before sending
             json_out = gzip.decompress(compressed_data).decode("utf-8")
-            response = Response(json_out, content_type="application/json")
+            response = Response(json_out, content_type=content_type)
             return response, 200
     except Warning as e:
         # handle error
